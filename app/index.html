@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-BR" data-tema="escuro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Cesta · Pesquisa de preços</title>
+  <meta name="description" content="Pesquisa e comparação de preços de supermercado, com lista de compras por mercado. Funciona sem internet.">
+  <meta name="theme-color" content="#121315">
+  <meta name="color-scheme" content="dark light">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="app.css">
+  <script>
+    // Tema antes de desenhar (evita piscar claro)
+    try { var p = JSON.parse(localStorage.getItem('cesta.prefs')) || {}; document.documentElement.dataset.tema = p.tema || 'escuro'; document.documentElement.dataset.fonte = p.fonte || 'normal'; } catch (e) {}
+  </script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <div id="app"><div class="boas"><p style="color:#a7adb5">Abrindo a Cesta…</p></div></div>
+  <div id="toast" aria-live="polite"></div>
+  <noscript>Este app precisa de JavaScript ligado.</noscript>
+</body>
+</html>

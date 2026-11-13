@@ -1,0 +1,16 @@
+{
+  "name": "app-mercado",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "icons": "python3 scripts/make-icons.py"
+  },
+  "devDependencies": {
+    "wrangler": "^4.40.0"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "description": "Cesta — offline-first grocery price research and comparison PWA, with receipts, budgets and route suggestions."
+}

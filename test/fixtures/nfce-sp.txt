@@ -1,0 +1,43 @@
+NFC-e
+DOCUMENTO AUXILIAR DA NOTA FISCAL DE CONSUMIDOR ELETRÔNICA
+
+
+SUPERMERCADO EXEMPLO LTDA
+CNPJ: 11.222.333/0001-81
+Rua das Flores , 100 , , Centro , Sao Paulo , SP
+FARINHA CAPUTO 00 DO (Código: S153585 )
+Qtde.:4   UN: UNID   Vl. Unit.:   17,98 	Vl. Total
+71,92
+REQUEIJAO LIGHT CATU (Código: S259115 )
+Qtde.:2   UN: UNID   Vl. Unit.:   18,98 	Vl. Total
+37,96
+BALAS GELATINA HALLO (Código: S247989 )
+Qtde.:1   UN: UNID   Vl. Unit.:   24,98 	Vl. Total
+24,98
+Qtd. total de itens:3
+Valor a pagar R$:134,86
+Forma de pagamento:Valor pago R$:
+Cartão de Débito134,86
+Troco0,00
+Informação dos Tributos Totais Incidentes (Lei Federal 12.741/2012) R$
+51,21
+Informações gerais da Nota
+EMISSÃO NORMAL
+
+Número: 99999 Série: 13 Emissão: 21/10/2026 18:57:27 - Via Consumidor
+
+Protocolo de Autorização: 10000000000000000 21/10/2026 18:57:23
+
+Ambiente de Produção - Versão XML: 4.00 - Versão XSLT: 2.05
+Chave de acesso
+Consulte pela Chave de Acesso em https://www.nfce.fazenda.sp.gov.br/NFCeConsultaPublica/Paginas/ConsultaQRCode.aspx
+
+Chave de acesso:
+3526 1011 2223 3300 0181 6501 3000 0999 9919 9999 9999
+Consumidor
+Consumidor não identificado
+Informações de interesse do contribuinte
+N. TC 000000000000000000000 Terminal: 013#Trib aprox. R$ Fed: 34,73 Est: 16,48 Mun: 0,00 IBPT 6ed75L#SOCIO: 00000000000000 FULANA DE TAL#FALE CONOSCO: 4020-5050 / 0800-705-5050#CUPOM VALIDO PARA ASSISTENCIA TECNICA#-ISENTO PIS/COFINS LEI 10147/00
+Informações de interesse do fisco
+vFCP: 0,00 vFCPST: 0,00
+Data/Hora: 29/10/2026 14:41

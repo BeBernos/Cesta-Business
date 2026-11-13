@@ -1,0 +1,6 @@
+node_modules/
+.wrangler/
+.dev.vars
+# planilhas e cópias pessoais não vão para o repositório
+*.xlsx
+cesta-copia-*.json

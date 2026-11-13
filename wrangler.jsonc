@@ -1,0 +1,21 @@
+// Configuração do Cloudflare (Worker "app-mercado").
+// - assets: a pasta app/ é servida como site estático (o app em si, funciona offline).
+// - main: worker/index.js só atende /api/* (sincronização entre os celulares).
+// - Durable Object "Dados" guarda a lista da família (SQLite, plano grátis). Nada a criar à mão.
+// - DIETA: ligação interna com o Worker "plano-familia" (app da dieta) para trazer a lista de compras da dieta.
+{
+  "name": "app-mercado",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./app",
+    "binding": "ASSETS"
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "DADOS", "class_name": "Dados" }]
+  },
+  // Só acrescente tags novas aqui; nunca edite/apague a v1 (apagaria os dados sincronizados)
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Dados"] }],
+  "services": [{ "binding": "DIETA", "service": "plano-familia", "entrypoint": "Ponte" }],
+  "observability": { "enabled": true }
+}
