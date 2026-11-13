@@ -15,6 +15,7 @@ import { conferirNovidades, mostrarNovidades, NOVIDADES } from './novidades.js';
 import { exportarExcel } from './ajustes.js';
 import { soltarTela } from './compra.js';
 import { abrirOtimizar } from './assistente.js';
+import { DEMO, prepararDemo, seloDemo } from './demo.js';
 import { cartoes as cartoesOrcamento, barra as barraOrcamento, frase as fraseOrcamento, abrirValor } from './orcamento.js';
 
 app.versao = '1.12.0';
@@ -312,6 +313,11 @@ async function iniciar() {
   } catch (e) {
     console.error(e);
     toast('Não consegui abrir os dados deste celular.');
+  }
+  // vitrine pública: lista pronta com preços fictícios, sem a tela de boas-vindas
+  if (DEMO) {
+    seloDemo();
+    if (!loja.meses().length) { prepararDemo(loja); app.prefs.apresentado = true; app.prefs.versaoVista = app.versao; app.salvarPrefs(); await salvar(); }
   }
   let ultimoEstado = null;
   app.sinc = criarSinc(loja, { salvarAgora: salvar, aoMudar: (s) => {
