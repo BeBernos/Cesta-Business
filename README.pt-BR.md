@@ -22,44 +22,55 @@ para conferir o que foi cobrado de verdade.**
 Foi feita para quem faz as compras da família e é usada todo mês desde outubro de 2026, no lugar de uma planilha com uma
 aba por mês. Catorze versões depois, ela também dá preço à dieta da família para o app de alimentação (Mesa).
 
+**Em números:** 14 versões · uso mensal desde out/2026 · 5 mercados × 147 produtos · 0 dependências · funciona 100% offline
+
 > A demonstração ao vivo abre com a lista pronta de 147 produtos e **preços fictícios** em cinco mercados, gerados no seu
 > navegador. Funciona offline; nada sai do seu navegador.
 
 ## O que faz
 
-| | | | |
-|:---:|:---:|:---:|:---:|
-| <img src="docs/images/01-precos.png" width="200"><br>**Preços em cinco mercados** | <img src="docs/images/02-produto.png" width="200"><br>**O mais barato de cada item** | <img src="docs/images/03-compra.png" width="200"><br>**Modo compra e rota** | <img src="docs/images/04-historico.png" width="200"><br>**Histórico do mês** |
-| <img src="docs/images/05-mais.png" width="200"><br>**Listas, notas, assistente** | <img src="docs/images/06-otimizar.png" width="200"><br>**Otimizar a lista** | <img src="docs/images/00-apresentacao.png" width="200"><br>**O que o app faz** | <img src="docs/images/07-computador.png" width="200"><br>**Planilha no computador** |
+<p align="center"><img src="docs/images/features-1-pt.png" alt="" width="100%"></p>
+<p align="center"><img src="docs/images/features-2-pt.png" alt="" width="100%"></p>
 
-<p align="center"><img src="docs/images/demo.gif" width="300" alt="Cesta: lista de preços, produto por mercado, modo compra, histórico"><br>
-<i>Preços por mercado, o mais barato em destaque, depois o modo compra com a rota sugerida e o histórico do mês.</i></p>
+<p align="center"><img src="docs/images/demo.gif" width="300" alt=""><br><i>Preços por mercado, o mais barato em destaque, depois o modo compra com a rota sugerida e o histórico do mês.</i></p>
 
-- **Pesquisa** — uma lista por mês (e listas extras), preço por mercado com marca e tamanho, o mercado mais barato de cada
-  item, o total do mês no menor preço, preço por kg / L / unidade entre embalagens, aviso de variação contra os meses
-  anteriores, marcas aceitas por produto, digitação de valor como app de banco.
-- **Compra** — lista por mercado com rota sugerida ("menos paradas: dois mercados por R$ 63 a mais"), valor do mês (ok /
-  quase / passou), preço da gôndola na hora com alerta quando passa 10% do previsto e está mais barato em outro mercado,
-  compartilhada entre os celulares em tempo real.
-- **Depois de pagar** — lê a nota fiscal eletrônica (NFC-e), liga cada linha a um produto, aprende os códigos de cada loja e
-  mostra o que foi cobrado acima da gôndola ou do previsto.
-- **Assistente sem API paga** — "Otimizar a lista" (costuma comprar e esqueceu, repetidos, categoria errada, embalagem maior
-  que compensa, itens sem preço) com um toque para resolver; categoria sugerida pelo nome; pedidos prontos para colar no
-  Claude (nota sem QR code, dicas para economizar).
-- **Planilha de ida e volta** — importa e exporta o formato Excel original da família, para nada se perder na mudança.
+**Em detalhe**
+- **Pesquisa** — uma lista por mês e listas extras, preço por mercado com marca e tamanho, o mais barato de cada item, total no
+  menor preço, preço por kg / L / unidade, aviso de variação, marcas aceitas, digitação de valor como app de banco.
+- **Compra** — lista por mercado, rota sugerida, valor do mês, preço da gôndola com alerta quando passa 10% do previsto e está
+  mais barato em outro mercado, compartilhada entre os celulares.
+- **Depois de pagar** — a NFC-e ligada aos produtos, códigos da loja aprendidos, cobrança a mais e item faltando apontados.
+- **Planilha** — importa e exporta o formato Excel original da família.
 
 ## Como funciona
 
-<p align="center"><img src="docs/images/architecture-pt.svg" alt="Diagrama da arquitetura" width="100%"></p>
+<p align="center"><img src="docs/images/architecture-pt.png" alt="" width="100%"></p>
 
-O diferente: **o celular é o banco de dados.** Cada fato — um preço, uma quantidade, uma marca, uma linha da nota — é um
-registro `{k, u, v}` no IndexedDB; vence o carimbo maior e apagar deixa lápide. O app funciona 100% offline e a
-sincronização é opcional: um único Durable Object do Cloudflare (SQLite) guarda os mesmos registros para a família, com a
-mesma regra. Não há build nem dependência — até o leitor e o gerador de `.xlsx` são escritos à mão sobre o
-`CompressionStream`.
+A Cesta é **local primeiro**: o celular é o banco de dados e o app é completo sem servidor. A sincronização é uma camada
+opcional — um Durable Object do Cloudflare por família — que aplica exatamente a mesma regra de junção dos celulares.
 
-O leitor de nota trabalha com o texto da página pública da Sefaz (copiado pelo usuário), não com robô: a página é protegida
-contra acesso automático e o app respeita isso.
+**No aparelho** — Cada fato é um registro `{k, u, v}` no IndexedDB: a chave diz o que é (um produto, um preço num mercado num mês, uma nota, um vínculo aprendido), `u` é o carimbo e vence o maior; apagar grava uma lápide. Todos os cálculos — mais barato, totais, orçamento, rota, conferência da nota — são funções puras sobre esses registros, então funcionam offline e são fáceis de testar.
+
+**Aprender sem IA** — Ligar as linhas da nota aos produtos e sugerir categorias junta regras conservadoras com o que a família já fez (códigos e descrições aprendidos); no empate, o app pergunta em vez de chutar.
+
+**Na borda** — O Worker leva `/api/*` a um Durable Object com SQLite. Um número de sequência por gravação deixa cada celular baixar só o que é novo. O token da família é o SHA-256 da senha e o servidor guarda só um hash dele.
+
+**Notas fiscais** — O app lê o texto da página pública da nota na Sefaz, copiado pelo usuário — nunca por robô, porque a página é protegida contra acesso automático. Dados pessoais são descartados na leitura.
+
+**Integrações** — Pelo Durable Object, a Cesta traz a lista de compras da dieta do app de alimentação (Mesa), converte gramas e mililitros em embalagens pelo tamanho da marca e devolve o preço por g/ml/unidade, para a Mesa mostrar o custo da dieta.
+
+### O fluxo
+
+<p align="center"><img src="docs/images/flow-pt.png" alt="" width="100%"></p>
+
+### Decisões de projeto
+
+| Decisão | Por quê |
+|---|---|
+| **O celular é o banco de dados** | Funciona em qualquer corredor de mercado, com ou sem sinal. |
+| **A mesma regra em todo lugar** | Celulares e servidor convergem com `{k, u, v}` + lápides; sem casos especiais. |
+| **Texto copiado, não robô** | Respeita a proteção da Sefaz e não quebra quando a página muda. |
+| **Zero dependências** | Até o leitor/gerador de `.xlsx` é escrito à mão; nada para atualizar, nada para auditar além do nosso código. |
 
 ## Segurança
 

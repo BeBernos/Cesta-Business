@@ -22,43 +22,55 @@ electronic receipt afterwards to check what was really charged.**
 It was built for the person who does the family's shopping and has been used every month since October 2026, replacing a
 spreadsheet with one tab per month. Fourteen releases later it also prices the family's diet for the nutrition app (Mesa).
 
+**At a glance:** 14 releases · used monthly since Oct 2026 · 5 stores × 147 products · 0 dependencies · works fully offline
+
 > The live demo opens with the ready-made list of 147 products and **fictitious prices** in five stores, generated in your
 > browser. It works offline; nothing leaves your browser.
 
 ## What it does
 
-| | | | |
-|:---:|:---:|:---:|:---:|
-| <img src="docs/images/01-precos.png" width="200"><br>**Prices in five stores** | <img src="docs/images/02-produto.png" width="200"><br>**Cheapest store per item** | <img src="docs/images/03-compra.png" width="200"><br>**Shopping mode & route** | <img src="docs/images/04-historico.png" width="200"><br>**History of the month** |
-| <img src="docs/images/05-mais.png" width="200"><br>**Lists, receipts, assistant** | <img src="docs/images/06-otimizar.png" width="200"><br>**Optimize the list** | <img src="docs/images/00-apresentacao.png" width="200"><br>**What the app does** | <img src="docs/images/07-computador.png" width="200"><br>**Spreadsheet view on desktop** |
+<p align="center"><img src="docs/images/features-1-en.png" alt="" width="100%"></p>
+<p align="center"><img src="docs/images/features-2-en.png" alt="" width="100%"></p>
 
-<p align="center"><img src="docs/images/demo.gif" width="300" alt="Cesta: price list, a product across stores, shopping mode, history"><br>
-<i>Prices per store, the cheapest one highlighted, then shopping mode with the suggested route and the month's history.</i></p>
+<p align="center"><img src="docs/images/demo.gif" width="300" alt=""><br><i>Prices per store, the cheapest one highlighted, then shopping mode with the suggested route and the month's history.</i></p>
 
-- **Research** — one list per month (plus extra lists), price per store with brand and package size, the cheapest store per
-  item, the month's total at the best prices, price per kg / L / unit across package sizes, price-change alerts against
-  previous months, accepted brands per product, money input like a banking app.
-- **Shopping** — a checklist per store with a suggested route ("fewer stops: two stores for R$ 63 more"), a monthly budget
-  (ok / almost / over), the shelf price captured on the spot with an alert when it is ≥10% above plan and cheaper
-  elsewhere, shared between phones in real time.
-- **After paying** — reads the Brazilian electronic receipt (NFC-e), links each line to a product, learns each store's codes
-  and reports what was charged above the shelf or planned price.
-- **Assistant without a paid API** — "Optimize the list" (usually bought but missing, duplicates, wrong categories, bigger
-  package that is cheaper, items without price) with one-tap fixes; category suggestions from the product name; ready
-  prompts to paste into Claude for receipts without a QR code and saving tips.
-- **Spreadsheet in and out** — imports and exports the family's original Excel format, so nothing was lost in the move.
+**In detail**
+- **Research** — one list per month plus extra lists, price per store with brand and size, cheapest store per item, total at
+  the best prices, price per kg / L / unit, price-change alerts, accepted brands, money input like a banking app.
+- **Shopping** — a checklist per store, a suggested route, a monthly budget, the shelf price with an alert when it's ≥10%
+  above plan and cheaper elsewhere, shared between phones.
+- **After paying** — the NFC-e receipt linked to products, store codes learned, overcharges and missing items flagged.
+- **Spreadsheet** — imports and exports the family's original Excel format.
 
 ## How it works
 
-<p align="center"><img src="docs/images/architecture-en.svg" alt="Architecture diagram" width="100%"></p>
+<p align="center"><img src="docs/images/architecture-en.png" alt="" width="100%"></p>
 
-The unusual part: **the phone is the database.** Every fact — a price, a quantity, a brand, a receipt line — is a record
-`{k, u, v}` in IndexedDB; the highest timestamp wins and deletions are tombstones. The app works fully offline, and sync is
-optional: a single Cloudflare Durable Object (SQLite) stores the same records for the family, applying the same rule. There
-is no build step and no dependency — even the `.xlsx` reader and writer are written by hand on top of `CompressionStream`.
+Cesta is **local-first**: the phone is the database and the app is complete without a server. Sync is an optional layer — one
+Cloudflare Durable Object per family — that applies exactly the same merge rule as the phones.
 
-The receipt reader works from the text of the tax authority's public page (copied by the user), not by scraping: the page
-is protected against automated access and the app respects that.
+**On the device** — Every fact is a record `{k, u, v}` in IndexedDB: the key says what it is (a product, a price in a store in a month, a receipt, a learned link), `u` is the timestamp and the highest wins; deleting writes a tombstone. All calculations — cheapest store, totals, budget, route, receipt audit — are pure functions over those records, so they work offline and are easy to test.
+
+**Learning without AI** — Linking receipt lines to products and suggesting categories combine conservative rules with what the family did before (learned codes and descriptions); on a tie, the app asks instead of guessing.
+
+**At the edge** — The Worker routes `/api/*` to one Durable Object with SQLite. A sequence number per write lets each phone pull only what's new. The family token is a SHA-256 of the password and the server keeps only a hash of it.
+
+**Receipts** — The app reads the text of the tax authority's public receipt page, which the user copies — it never scrapes the page, which is protected against bots. Personal identifiers are discarded on parsing.
+
+**Integrations** — Through the Durable Object, Cesta pulls the diet's shopping list from the nutrition app (Mesa), converts grams and millilitres into packages by brand size, and sends back the price per gram/ml/unit so Mesa can show the diet's cost.
+
+### The flow
+
+<p align="center"><img src="docs/images/flow-en.png" alt="" width="100%"></p>
+
+### Design decisions
+
+| Decision | Why |
+|---|---|
+| **The phone is the database** | It works in any store aisle, with or without signal. |
+| **Same merge rule everywhere** | Phones and server converge with `{k, u, v}` + tombstones; no special cases. |
+| **Copied text, not scraping** | Respects the tax authority's bot protection and never breaks when the page changes its markup. |
+| **Zero dependencies** | Even the `.xlsx` reader/writer is hand-written; nothing to update, nothing to audit but our code. |
 
 ## Security
 
