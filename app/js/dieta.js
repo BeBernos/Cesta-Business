@@ -9,7 +9,7 @@ import { norm, nomeMes, mesDe } from './modelo.js';
 
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const ddmm = (s) => `${s.slice(8, 10)}/${s.slice(5, 7)}`;
-const fmtDieta = (q, u) => (q == null ? 'sem quantidade' : u === 'g' && q >= 1000 ? `${fmtQ(q / 1000)} kg` : u === 'ml' && q >= 1000 ? `${fmtQ(q / 1000)} L` : `${fmtQ(q)}${u === 'un' ? ' un' : u}`);
+export const fmtDieta = (q, u) => (q == null ? 'sem quantidade' : u === 'g' && q >= 1000 ? `${fmtQ(q / 1000)} kg` : u === 'ml' && q >= 1000 ? `${fmtQ(q / 1000)} L` : `${fmtQ(q)}${u === 'un' ? ' un' : u}`);
 
 // Seções da dieta → categorias do mercado (pelo nome; quem renomeou "Açougue" etc. também acerta)
 const SECOES = { 'Açougue': ['acougue', 'carne'], 'Peixaria': ['peix', 'carne'], 'Hortifruti': ['hortifruti', 'fruta', 'verdura'],
@@ -70,7 +70,7 @@ export function trazerDieta(mes = mesDe(app.mes)) {
   const existe = loja.listaDaDieta(mes);
   const f = folha([
     h('h2', null, '🥗 Trazer a lista da dieta'),
-    h('p', { class: 'sub' }, `Busca no app Plano da Família tudo o que a dieta usa no período, já somado. ${existe ? `Substitui as quantidades de “${loja.nomeLista(existe)}”.` : `Vira uma lista separada, “Dieta · ${nomeMes(mes).split(' ')[0]}”.`}`),
+    h('p', { class: 'sub' }, `Busca no app Plano da Família tudo o que a dieta usa no período, já somado. Depois você escolhe para onde vai: ${existe ? `substituir “${loja.nomeLista(existe)}”` : `uma lista separada, “Dieta · ${nomeMes(mes).split(' ')[0]}”`}, ou somar numa lista que já existe.`),
     chips, erro,
     h('div', { class: 'acoes lado' }, h('button', { class: 'btn fantasma', onclick: () => f.fechar() }, 'Cancelar'), btn),
   ]);
@@ -89,7 +89,7 @@ function revisar(mes, r) {
   const dieta = loja.listaDaDieta(mes);
   const selDestino = h('select', { class: 'entrada' },
     h('option', { value: '' }, dieta ? `${loja.nomeLista(dieta)} (substituir)` : `Lista separada: Dieta · ${nomeMes(mes).split(' ')[0]}`),
-    listas.filter((id) => id !== dieta).map((id) => h('option', { value: id }, `Somar em ${loja.nomeLista(id)}`)));
+    listas.map((id) => h('option', { value: id }, `Somar em ${loja.nomeLista(id)}${id === dieta ? ' (manter o que já tem)' : ''}`)));
   const corpo = h('div', { class: 'lista-ed' });
   const resumo = h('p', { class: 'sub' });
   const qtdDe = (i) => loja.embalagens(mes, i.pid, i.qtd, i.unid);
@@ -142,7 +142,7 @@ function revisar(mes, r) {
         i.pid = loja.duplicados(mes, nome)[0]?.id || loja.addProduto(mes, { nome, cat: categoriaPara(i.categoria, nome) });
         novos++;
       }
-      const usados = itens.filter((i) => i.como !== 'nao' && i.pid).map((i) => ({ pid: i.pid, qtd: qtdDe(i).qtd, desc: i.nome }));
+      const usados = itens.filter((i) => i.como !== 'nao' && i.pid).map((i) => ({ pid: i.pid, qtd: qtdDe(i).qtd, desc: i.nome, dieta: { qtd: i.qtd, unid: i.unid } }));
       destino = loja.aplicarDieta(mes, usados, { de: r.de, ate: r.ate, para }).id;
     });
     // preços para o app da dieta calcular quanto custa a semana (sem preço anotado, o item só fica de fora da conta)

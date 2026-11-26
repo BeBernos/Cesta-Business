@@ -510,7 +510,11 @@ body.largo #app, body.largo .rodape-in { max-width: min(1680px, 100%); }
 .grade .g-merc { color: var(--texto); border-left: 1px solid var(--linha); }
 .grade .g-prod { position: sticky; left: 0; z-index: 1; background: var(--card); text-align: left; min-width: 190px; border-right: 1px solid var(--linha); }
 .grade thead .g-prod { z-index: 3; background: var(--card2); }
-.grade .g-cat td { background: var(--petroleo-bg); color: var(--petroleo); font-weight: 750; padding: 6px 10px; }
+.grade .g-cat td { background: var(--petroleo-bg); color: var(--petroleo); font-weight: 750; padding: 0; }
+.grade .g-cat-bt { display: flex; align-items: center; gap: 6px; width: 100%; padding: 6px 10px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.grade .g-cat-bt svg { width: 16px; height: 16px; }
+.grade .g-dieta { color: var(--suave); font-weight: 500; }
+.grade .g-cat-bt small { color: var(--suave); font-weight: 500; }
 .grade .g-p { border-left: 1px solid var(--linha); }
 .g-nome { background: none; border: 0; color: var(--texto); font: inherit; font-weight: 650; text-align: left; padding: 4px 2px; cursor: pointer; }
 .g-nome:hover { color: var(--petroleo); text-decoration: underline; }

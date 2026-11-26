@@ -18,7 +18,7 @@ import { abrirOtimizar } from './assistente.js';
 import { DEMO, prepararDemo, seloDemo } from './demo.js';
 import { cartoes as cartoesOrcamento, barra as barraOrcamento, frase as fraseOrcamento, abrirValor } from './orcamento.js';
 
-app.versao = '1.14.1';
+app.versao = '1.14.2';
 
 // ---------- preferências deste celular ----------
 function lerPrefs() { try { return JSON.parse(localStorage.getItem('cesta.prefs')) || {}; } catch { return {}; } }

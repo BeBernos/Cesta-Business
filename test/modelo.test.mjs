@@ -295,6 +295,27 @@ test('preço no caixa: no carrinho soma o pago e a conta do mês usa o real', ()
   assert.equal(l.orcamento(mes).noCarrinho, 0);
 });
 
+test('gôndola com outro tamanho: não compara com o orçado nem muda a pesquisa sozinha', () => {
+  const l = nova();
+  const mes = '2026-10';
+  const [at] = l.mercados();
+  const a = produto(l, mes, 'Arroz');
+  l.setQtd(mes, a.id, 2); l.setPreco(mes, a.id, at.id, 20); l.setMarca(mes, a.id, at.id, 'Camil 5kg');
+  assert.equal(l.outroTamanho(mes, a.id, at.id, 'Camil 5kg'), false);
+  assert.equal(l.outroTamanho(mes, a.id, at.id, 'Tio João 5 kg'), false, 'outra marca, mesmo tamanho');
+  assert.equal(l.outroTamanho(mes, a.id, at.id, 'Camil 1kg'), true);
+  l.pagarNoCaixa(mes, a.id, { mid: at.id, preco: 6, qtd: 3, marca: 'Camil 1kg', atualizarPesquisa: false });
+  const it = l.listaCompra(mes).grupos.flatMap((g) => g.itens).find((i) => i.p.id === a.id);
+  assert.deepEqual([it.outroTam, it.marca, it.total, it.totalEst], [true, 'Camil 1kg', 18, 18]);
+  assert.equal(l.orcamento(mes).difCaixa, 0, 'outro tamanho não conta como "mais caro" nem "mais barato"');
+  assert.deepEqual([l.preco(mes, a.id, at.id).preco, l.preco(mes, a.id, at.id).marca], [20, 'Camil 5kg'], 'pesquisa intacta');
+  // pedindo para atualizar a pesquisa, vão preço e tamanho juntos; voltar ao pesquisado desfaz os dois
+  l.pagarNoCaixa(mes, a.id, { mid: at.id, preco: 6, qtd: 3, marca: 'Camil 1kg', atualizarPesquisa: true });
+  assert.deepEqual([l.preco(mes, a.id, at.id).preco, l.preco(mes, a.id, at.id).marca], [6, 'Camil 1kg']);
+  l.voltarAoPesquisado(mes, a.id);
+  assert.deepEqual([l.preco(mes, a.id, at.id).preco, l.preco(mes, a.id, at.id).marca], [20, 'Camil 5kg']);
+});
+
 test('tirar da lista: zera a quantidade e limpa a marcação; desfazer volta', () => {
   const l = nova();
   const mes = '2026-10';
@@ -855,6 +876,12 @@ test('lista da dieta: g/ml/un viram embalagens pela marca; lista separada, subst
   assert.equal(l.produto(mes, fr.id).qtd, 3);
   r3.desfazer();
   assert.equal(l.produto(mes, fr.id).qtd, 1);
+  // a quantidade da Mesa (g, ml, un) fica guardada ao lado das embalagens; somar na própria lista da dieta soma as duas
+  const r4 = l.aplicarDieta(mes, [{ pid: fr.id, qtd: 1, dieta: { qtd: 600, unid: 'g' } }, { pid: fr.id, qtd: 1, dieta: { qtd: 300, unid: 'g' } }], { de: '2026-10-01', ate: '2026-10-07' });
+  assert.deepEqual(l.dietaQtd(r4.id, fr.id), { qtd: 900, unid: 'g' });
+  assert.equal(l.dietaQtd(r4.id, ov.id), null, 'substituir apaga o que era da vez anterior');
+  l.aplicarDieta(mes, [{ pid: fr.id, qtd: 1, dieta: { qtd: 500, unid: 'g' } }], { para: r4.id });
+  assert.deepEqual([l.produto(r4.id, fr.id).qtd, l.dietaQtd(r4.id, fr.id)], [3, { qtd: 1400, unid: 'g' }]);
 });
 
 test('categorias sem IA: as regras concordam com a lista padrão e acertam nomes novos', () => {

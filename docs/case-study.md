@@ -2,7 +2,7 @@
 
 *[Leia em português](case-study.pt-BR.md)*
 
-**Role:** product, UX and engineering, end to end · **Period:** Oct 2026 – today, 17 releases · **Users:** the person who
+**Role:** product, UX and engineering, end to end · **Period:** Oct 2026 – today, 18 releases · **Users:** the person who
 does the family's shopping, every month (two phones in sync)
 
 ## The problem
