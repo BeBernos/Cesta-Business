@@ -20,10 +20,10 @@ where each item is cheapest and the best route of stores to visit, turns into a 
 electronic receipt afterwards to check what was really charged.**
 
 It was built for the person who does the family's shopping and has been used every month since October 2026, replacing a
-spreadsheet with one tab per month. Sixteen releases later it also prices the family's diet for the nutrition app (Mesa) and hands the family's feedback
+spreadsheet with one tab per month. Seventeen releases later it also prices the family's diet for the nutrition app (Mesa) and hands the family's feedback
 straight to Claude through its own connector.
 
-**At a glance:** 16 releases · used monthly since Oct 2026 · 5 stores × 147 products · 0 dependencies · works fully offline
+**At a glance:** 17 releases · used monthly since Oct 2026 · 5 stores × 147 products · 0 dependencies · works fully offline
 
 > The live demo opens with the ready-made list of 147 products and three months of **fictitious prices** in five stores,
 > generated in your browser. It works offline; nothing leaves your browser.

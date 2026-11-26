@@ -6,6 +6,12 @@ import { h, folha } from './ui.js';
 
 export const NOVIDADES = [
   {
+    versao: '1.14.1', titulo: 'Ícone novo',
+    itens: [
+      ['🏷️', 'Ícone com o visual novo', 'O ícone do Cesta agora é uma etiqueta de gôndola com a cestinha e a fita verde do menor preço, igual ao resto do app. No celular ele troca sozinho em alguns dias; se quiser na hora, remova o atalho da tela inicial e instale o app de novo pelo Chrome (os dados continuam).'],
+    ],
+  },
+  {
     versao: '1.14.0', titulo: 'O Claude lê as ideias sozinho',
     itens: [
       ['💡', 'Sem copiar e colar', 'As ideias e problemas que vocês mandam em Mais → Ideias agora chegam sozinhas ao Claude, pelo “Conector do Claude” (ligue uma vez em Mais → Ideias). Quando a mudança fica pronta, ele mesmo marca como resolvida e deixa uma resposta aqui.'],

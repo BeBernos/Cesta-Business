@@ -81,7 +81,8 @@ await p.waitForTimeout(200);
 if (await p.locator('.folha select').count()) await p.selectOption('.folha select', { label: "Sam's Club" });
 await p.click('.folha .btn.prim:has-text("Salvar e conferir")');
 await p.waitForSelector('.folha .nf-bloco.alerta');
-await p.waitForTimeout(4500); // espera o aviso "Nota conferida" sumir
+await p.waitForTimeout(400);
+await p.evaluate(() => document.querySelectorAll('#toast .toast').forEach((e) => e.remove())); // sem o aviso "Nota conferida" na foto
 await foto(p, '08-nota');
 
 const pc = await tela(1440, 900);
@@ -109,7 +110,8 @@ await aba(v, 'Histórico'); await v.waitForTimeout(1800);
 const video = await v.video().path();
 await ctxV.close();
 const gif = join(saida, 'demo.gif');
-execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-ss', '0.8', '-i', video, '-vf',
+const dur = Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', video]).toString());
+execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-ss', '0.8', '-t', String(dur - 1.4), '-i', video, '-vf',
   'fps=12,scale=300:-1:flags=lanczos,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4', gif]);
 rmSync(join(saida, '.video'), { recursive: true, force: true });
 
@@ -157,6 +159,62 @@ await desenhar(`<div style="position:relative;height:800px">
   <div style="position:absolute;left:1340px;top:180px;width:270px;transform:rotate(8deg)"><div class="cel"><img src="${img('04-historico')}"></div></div>
   <div style="position:absolute;left:1035px;top:70px;width:330px"><div class="cel"><img src="${img('01-precos')}"></div></div>
 </div>`, 'capa', 800);
+
+// Arquitetura (EN/PT): caixas em HTML e setas num SVG por cima
+const T = {
+  en: { eyebrow: 'ARCHITECTURE', titulo: 'How Cesta works', sub: 'A local-first app where the phone is the database; an optional Durable Object keeps the family\'s phones in step.',
+    cols: ['THE PHONE (LOCAL-FIRST)', 'CLOUDFLARE EDGE (OPTIONAL)', 'INTEGRATIONS'],
+    pwa: ['PHONE', 'Cesta PWA', ['Plain ES modules, no build, zero deps', 'Model: records {k, u, v}, tombstones', 'Calculations: cheapest, totals, budget, route', 'Receipt reader (NFC-e text) + linking', 'Shelf-tag UI, gestures, local font']],
+    idb: ['DATA', 'IndexedDB + .xlsx', ['every record on the device first', '.xlsx read/write by hand (CompressionStream)', 'service worker: fully offline']],
+    wk: ['EDGE', 'Worker: app-mercado', ['/api router → one Durable Object', 'family token check (hash of a hash)', '/api/dieta, /api/dieta-precos → Mesa', '/api/mcp/<secret> → Claude connector']],
+    dobj: ['DATA', 'Durable Object \'Dados\'', ['SQLite, one per family (free plan)', 'same {k, u, v} rule as the phones', 'sequence numbers for incremental pulls']],
+    mesa: ['NUTRITION', 'Mesa Worker', ['diet shopping list in, price per g/ml/un out', 'service binding, no public route']],
+    nfe: ['NFC-E', 'Tax authority page', ['user copies the receipt page text', 'never scraped — bot protection respected']],
+    mcp: ['MCP', 'Claude connector', ['reads the family\'s ideas and bug reports', 'answers them; replies sync to the phones']],
+    cc: ['AI', 'Claude (copy & paste)', ['receipts without QR · categories · tips', 'no paid API']],
+    rot: ['optional sync', 'service binding', 'copied text', 'MCP', 'prompts'] },
+  pt: { eyebrow: 'ARQUITETURA', titulo: 'Como a Cesta funciona', sub: 'Um app local primeiro, em que o celular é o banco de dados; um Durable Object opcional mantém os celulares da família iguais.',
+    cols: ['O CELULAR (LOCAL PRIMEIRO)', 'BORDA DO CLOUDFLARE (OPCIONAL)', 'INTEGRAÇÕES'],
+    pwa: ['CELULAR', 'Cesta PWA', ['Módulos ES puros, sem build, zero dependências', 'Modelo: registros {k, u, v}, lápides', 'Cálculos: mais barato, totais, orçamento, rota', 'Leitor de nota (texto da NFC-e) + vínculos', 'Visual etiqueta, gestos, fonte local']],
+    idb: ['DADOS', 'IndexedDB + .xlsx', ['todo registro primeiro no aparelho', '.xlsx lido e gerado à mão (CompressionStream)', 'service worker: 100% offline']],
+    wk: ['BORDA', 'Worker: app-mercado', ['/api → um Durable Object', 'confere o token da família (hash de hash)', '/api/dieta, /api/dieta-precos → Mesa', '/api/mcp/<secreto> → conector do Claude']],
+    dobj: ['DADOS', 'Durable Object \'Dados\'', ['SQLite, um por família (plano grátis)', 'mesma regra {k, u, v} dos celulares', 'números de sequência: baixa só o novo']],
+    mesa: ['DIETA', 'Worker da Mesa', ['recebe a lista da dieta, devolve R$ por g/ml/un', 'ligação interna, sem rota pública']],
+    nfe: ['NFC-E', 'Página da Sefaz', ['o usuário copia o texto da nota', 'nunca por robô — proteção respeitada']],
+    mcp: ['MCP', 'Conector do Claude', ['lê as ideias e problemas da família', 'responde; a resposta chega aos celulares']],
+    cc: ['IA', 'Claude (copiar e colar)', ['nota sem QR · categorias · dicas', 'sem API paga']],
+    rot: ['sincronização opcional', 'ligação interna', 'texto copiado', 'MCP', 'pedidos'] },
+};
+const caixa = ([tag, tit, itens], x, y, w, h, destaque) => `<div style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:14px;padding:16px 18px;
+  background:#16171a;border:1px solid ${destaque ? '#6fd8ec' : '#2c3036'}"><div style="display:flex;align-items:center;gap:10px">
+  <span style="font-size:10px;font-weight:700;letter-spacing:.1em;color:#6fd8ec;background:#0f3440;border-radius:5px;padding:3px 7px">${tag}</span>
+  <b style="font-size:17px;font-weight:700">${tit}</b></div><ul style="margin:10px 0 0;padding-left:30px;color:#c9ced4;font-size:12.5px;line-height:1.65">
+  ${itens.map((t) => `<li>${t.replace(/</g, '&lt;')}</li>`).join('')}</ul></div>`;
+const coluna = (rot, x, w) => `<div style="position:absolute;left:${x}px;top:175px;width:${w}px;height:530px;border:1px dashed #2a2e33;border-radius:18px">
+  <span style="position:absolute;top:-9px;left:18px;background:#0d0e10;padding:0 8px;color:#a7adb5;font-size:11px;letter-spacing:.14em;font-weight:600">${rot}</span></div>`;
+const etiqueta = (t, x, y) => `<span style="position:absolute;left:${x}px;top:${y}px;transform:translate(-50%,-50%);background:#16171a;border:1px solid #3a3e44;border-radius:99px;padding:3px 11px;font-size:11.5px;color:#eef0f2;white-space:nowrap">${t}</span>`;
+for (const lado of ['en', 'pt']) {
+  const t = T[lado];
+  await desenhar(`<div style="position:relative;height:900px;transform:translateY(60px)">
+    <div style="position:absolute;left:50px;top:30px"><div style="color:#6fd8ec;font-size:13px;letter-spacing:.16em;font-weight:700">${t.eyebrow}</div>
+      <h1 style="font-size:40px;font-weight:800;font-stretch:110%;margin:8px 0 6px">${t.titulo}</h1><p style="color:#a7adb5;font-size:15px">${t.sub}</p></div>
+    ${coluna(t.cols[0], 30, 410)}${coluna(t.cols[1], 460, 420)}${coluna(t.cols[2], 900, 670)}
+    ${caixa(t.pwa, 50, 200, 360, 185, true)}${caixa(t.idb, 50, 450, 360, 135)}
+    ${caixa(t.wk, 480, 200, 380, 150, true)}${caixa(t.dobj, 480, 450, 380, 135)}
+    ${caixa(t.mcp, 930, 200, 620, 100, true)}${caixa(t.nfe, 930, 320, 620, 100)}${caixa(t.cc, 930, 440, 620, 100)}${caixa(t.mesa, 930, 560, 620, 100)}
+    <svg width="1600" height="900" style="position:absolute;inset:0" fill="none" stroke="#a7adb5" stroke-width="1.4">
+      <defs><marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#a7adb5" stroke="none"/></marker></defs>
+      <path d="M410 262 H480" marker-start="url(#m)" marker-end="url(#m)"/>
+      <path d="M230 385 V450" marker-end="url(#m)"/>
+      <path d="M670 350 V450" marker-end="url(#m)"/>
+      <path d="M860 250 H930" marker-start="url(#m)" marker-end="url(#m)"/>
+      <path d="M860 540 C895 540 895 610 930 610" marker-start="url(#m)" marker-end="url(#m)"/>
+      <path d="M930 360 C760 360 600 380 412 320" stroke-dasharray="6 6" marker-end="url(#m)"/>
+      <path d="M930 470 C880 420 700 420 412 360" stroke-dasharray="6 6" marker-end="url(#m)"/>
+    </svg>
+    ${etiqueta(t.rot[0], 445, 240)}${etiqueta(t.rot[1], 895, 575)}${etiqueta(t.rot[2], 770, 366)}${etiqueta(t.rot[3], 895, 228)}${etiqueta(t.rot[4], 770, 425)}
+  </div>`, `architecture-${lado}`, 900);
+}
 
 await browser.close();
 srv.close();
