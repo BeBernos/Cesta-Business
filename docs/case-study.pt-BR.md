@@ -2,7 +2,7 @@
 
 *[Read in English](case-study.md)*
 
-**Papel:** produto, UX e engenharia, de ponta a ponta · **Período:** out/2026 – hoje, 17 versões · **Usuários:** quem faz as
+**Papel:** produto, UX e engenharia, de ponta a ponta · **Período:** out/2026 – hoje, 18 versões · **Usuários:** quem faz as
 compras da família, todo mês (dois celulares sincronizados)
 
 ## O problema

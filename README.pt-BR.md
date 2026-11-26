@@ -20,10 +20,10 @@ cada item sai mais barato e a melhor rota de mercados, vira lista de compra na h
 para conferir o que foi cobrado de verdade.**
 
 Foi feita para quem faz as compras da família e é usada todo mês desde outubro de 2026, no lugar de uma planilha com uma
-aba por mês. Dezessete versões depois, ela também dá preço à dieta da família para o app de alimentação (Mesa) e entrega as ideias da
+aba por mês. Dezoito versões depois, ela também dá preço à dieta da família para o app de alimentação (Mesa) e entrega as ideias da
 família direto ao Claude, por um conector próprio.
 
-**Em números:** 17 versões · uso mensal desde out/2026 · 5 mercados × 147 produtos · 0 dependências · funciona 100% offline
+**Em números:** 18 versões · uso mensal desde out/2026 · 5 mercados × 147 produtos · 0 dependências · funciona 100% offline
 
 > A demonstração ao vivo abre com a lista pronta de 147 produtos e três meses de **preços fictícios** em cinco mercados,
 > gerados no seu navegador. Funciona offline; nada sai do seu navegador.
@@ -93,7 +93,7 @@ Detalhes em [SECURITY.md](SECURITY.md).
 - **Leitor de nota** testado contra uma NFC-e real (anonimizada), com códigos, quantidades, descontos e o mercado da loja.
 - **Aprende sem IA** — o vínculo produto/nota e a sugestão de categoria aprendem com o que a família faz, com regras que
   nunca chutam quando há empate.
-- **46 testes do modelo e do conector** e um ponta a ponta com Playwright do app inteiro: dois celulares, offline, notas, planilha e a
+- **47 testes do modelo e do conector** e um ponta a ponta com Playwright do app inteiro: dois celulares, offline, notas, planilha e a
   integração com o app de alimentação com os dois Workers rodando localmente.
 
 ## Tecnologias

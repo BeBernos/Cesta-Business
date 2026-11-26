@@ -5,6 +5,7 @@ import { h, fmtRS, fmtN, fmtQ, lerExpr, folha, perguntar, toast, vibrar, campoMo
 import { norm, lerNumero, nomeMes, porUnidade, variacaoPreco, mesDe, nomeDaMarca } from './modelo.js';
 import { marcasComuns } from './marcas.js';
 import { montarGrade, pintarLinha, telaLarga } from './grade.js';
+import { fmtDieta } from './dieta.js';
 
 const filtros = { busca: '', falta: false, cat: null, merc: null, comprar: false };
 const abertos = new Set();
@@ -125,7 +126,7 @@ export function pintarLista() {
     pintarBanda(sec);
     frag.push(sec);
   }
-  if (grade?.length) frag.push(montarGrade(grade, { aoMudar: () => { pintarProgresso(); app.pintarRodape(); }, editar: (pid) => editarProduto(pid) }));
+  if (grade?.length) frag.push(montarGrade(grade, { aoMudar: () => { pintarProgresso(); app.pintarRodape(); }, editar: (pid) => editarProduto(pid), abrirTudo: !!filtros.busca }));
   if (!mostrados) {
     const termo = filtros.busca.trim();
     frag.push(h('div', { class: 'vazio-lista' },
@@ -381,7 +382,8 @@ function pintar(card) {
   card._qtd.parentElement.classList.toggle('vazia', !p.qtd);
   const marcaPrinc = c.marcaMenor || c.linhas.find((l) => l.marca)?.marca || '';
   const aceitas = loja.marcasAceitas(pid);
-  card._sub.textContent = [marcaPrinc, aceitas.length ? `só ${aceitas.join(', ')}` : '', p.obs].filter(Boolean).join(' · ');
+  const dq = loja.dietaQtd(mes, pid);
+  card._sub.textContent = [marcaPrinc, aceitas.length ? `só ${aceitas.join(', ')}` : '', dq ? `dieta: ${fmtDieta(dq.qtd, dq.unid)}` : '', p.obs].filter(Boolean).join(' · ');
   card._sub.hidden = !card._sub.textContent;
   const lMenor = c.linhas.find((l) => l.mid === c.mercMenor);
   card._unid.textContent = lMenor?.porUnid != null ? `${fmtRS(lMenor.porUnid)}/${lMenor.tam.base}` : '';

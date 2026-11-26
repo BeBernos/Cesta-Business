@@ -277,6 +277,24 @@ await bb.click('.folha .btn:has-text("Só anotar")');
 await bb.waitForTimeout(300);
 assert.ok(await bb.locator('.ic-compra:not(.ok):has-text("Detergente de louça") .gondola.mais').count(), 'anotado (acima dos 22,90 orçados) e fora do carrinho');
 passo('gôndola: aviso de 10% com outro mercado mais barato, “Deixar para o Assaí” e “Só anotar”');
+// Gôndola com outro tamanho: o sal de 1 kg pesquisado não tem, só o de 500 g → o preço fica só na compra
+const sal = await bb.evaluate(() => { const l = __cesta.loja; const p = l.produtos('2026-10').find((x) => x.nome === 'Sal'); const mid = l.mercados()[0].id;
+  l.setMarca('2026-10', p.id, mid, 'Cisne 1kg'); __cesta.render(); return { pid: p.id, mid, preco: l.preco('2026-10', p.id, mid).preco }; });
+await bb.locator('.ic-compra:has-text("Sal") button[aria-label^="Preço da gôndola"]').click();
+assert.equal(await bb.locator('.folha label.check input').isChecked(), true);
+await bb.fill('.folha input.entrada >> nth=2', 'Cisne 500g');
+assert.equal(await bb.locator('.folha label.check input').isChecked(), false, 'outro tamanho desmarca "atualizar a pesquisa"');
+await bb.fill('.folha input.entrada >> nth=1', '1,20');
+await bb.click('.folha .btn.verde');
+await bb.waitForTimeout(300);
+assert.ok(await bb.locator('.ic-compra:has-text("Sal") .gondola:has-text("outro tamanho")').count());
+assert.deepEqual(await bb.evaluate(({ pid, mid }) => { const r = __cesta.loja.preco('2026-10', pid, mid); return [r.preco, r.marca]; }, sal), [sal.preco, 'Cisne 1kg'], 'pesquisa intacta');
+await print(bb, '05d-gondola-outro-tamanho');
+await bb.locator('.ic-compra:has-text("Sal") button[aria-label^="Preço da gôndola"]').click();
+await bb.click('.folha .btn:has-text("Usar o orçado")');
+await bb.waitForTimeout(300);
+await bb.evaluate(({ pid, mid }) => { __cesta.loja.setMarca('2026-10', pid, mid, ''); __cesta.render(); }, sal);
+passo('gôndola com outro tamanho: não compara com o orçado nem troca a pesquisa');
 // Tirar da lista: o arroz sai da compra (fica sem quantidade) e o Desfazer devolve
 await bb.locator('.ic-compra:has-text("Arroz") button[aria-label^="Opções de"]').click();
 await bb.click('.folha .btn.perigo:has-text("Tirar da lista")');
@@ -485,6 +503,12 @@ if (process.env.DIETA_URL) {
   assert.equal(d.nome, 'Dieta · Outubro');
   assert.equal(d.dieta, d.id);
   assert.ok(d.n >= 5, `itens da dieta na lista (${d.n})`);
+  // cada item da dieta mostra quanto a Mesa pede, ao lado da quantidade em embalagens
+  const buscaAntes = await a.locator('input[type=search]').inputValue();
+  await a.fill('input[type=search]', 'arroz');
+  await a.waitForSelector('.card small:has-text("dieta: 430g")');
+  await print(a, '17b-dieta-lista');
+  await a.fill('input[type=search]', buscaAntes);
   passo(`lista da dieta: Plano da Família → “Dieta · Outubro” com ${d.n} itens (ligação interna entre os Workers)`);
   // preços dos itens ligados voltam para o app da dieta (custo da semana lá)
   await a.waitForTimeout(800);
@@ -579,6 +603,13 @@ const calcSal = await a.evaluate((pid) => { const l = __cesta.loja; return [l.pr
 assert.equal(calcSal[0], 1.5);
 assert.equal(await linhaSal.locator('.g-menor').innerText(), calcSal[1].toFixed(2).replace('.', ','));
 await print(a, '14-planilha');
+// recolher a primeira categoria esconde os produtos dela; tocar de novo abre
+const linhasAntes = await a.locator('table.grade tr[data-pid]').count();
+await a.locator('.g-cat-bt').first().click();
+await a.waitForSelector('.g-cat-bt[aria-expanded="false"]');
+assert.ok(await a.locator('table.grade tr[data-pid]').count() < linhasAntes, 'categoria recolhida');
+await a.locator('.g-cat-bt[aria-expanded="false"]').first().click();
+await a.waitForFunction((n) => document.querySelectorAll('table.grade tr[data-pid]').length === n, linhasAntes);
 await a.click('.chip:has-text("Planilha")');
 await a.waitForSelector('.card');
 assert.equal(await a.locator('table.grade').count(), 0, 'dá para voltar aos cartões');

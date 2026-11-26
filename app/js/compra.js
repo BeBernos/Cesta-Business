@@ -208,7 +208,7 @@ function itemCompra(it) {
   const detalhe = [h('span', { class: 'q' }, `${fmtQ(real?.qtd ?? it.p.qtd)}×`), it.marca ? ` · ${it.marca}` : '', it.preco != null ? ` · ${fmtRS(real?.preco ?? it.preco)} un.` : ''];
   const dif = real && !it.semEst ? Math.round((it.total - it.totalEst) * 100) / 100 : 0;
   const refUnit = real && !it.semEst ? it.totalEst / it.p.qtd : null;
-  const txtOrcado = refUnit === null ? '' : ` · orçado ${fmtRS(refUnit)}${dif ? ` (${dif > 0 ? '+' : '−'}${fmtRS(Math.abs(dif))})` : ' (igual)'}`;
+  const txtOrcado = it.outroTam ? ' · outro tamanho' : refUnit === null ? '' : ` · orçado ${fmtRS(refUnit)}${dif ? ` (${dif > 0 ? '+' : '−'}${fmtRS(Math.abs(dif))})` : ' (igual)'}`;
   const frente = h('div', { class: `ic-compra${it.ok ? ' ok' : ''}` },
     h('button', { class: 'marca-cx', role: 'checkbox', 'aria-checked': String(it.ok), 'aria-label': it.p.nome, onclick: alternar }, icone('check')),
     h('button', { class: 'tx', onclick: alternar },
@@ -285,7 +285,10 @@ function gondola(it) {
   const inpPreco = h('input', { class: 'entrada num', inputmode: 'decimal', value: fmtN(it.pago?.preco ?? it.preco), placeholder: 'R$ por unidade', autofocus: true, enterkeyhint: 'done',
     style: { fontSize: '1.25rem', fontWeight: 700 } });
   campoMoeda(inpPreco, () => app.prefs.moeda !== false);
-  const chk = h('input', { type: 'checkbox', checked: true });
+  // outro tamanho na prateleira (ex.: 2 L em vez de 1 L): o preço não é comparável e não vai para a pesquisa sozinho
+  const inpMarca = h('input', { class: 'entrada', value: it.marca || '', placeholder: 'Ex.: Italac 1L', autocapitalize: 'sentences' });
+  let eraOutro = it.outroTam || false;
+  const chk = h('input', { type: 'checkbox', checked: !eraOutro });
   const nomeMerc = () => (it.mid ? rota.find((m) => m.id === it.mid)?.nome : rota.find((m) => m.id === selMerc.value)?.nome) || '';
   const rotChk = h('span');
   const conta = h('div', { class: 'aviso', style: { background: 'var(--card2)', borderColor: 'var(--linha)', color: 'var(--texto)' } });
@@ -294,13 +297,19 @@ function gondola(it) {
     const q = lerNumero(inpQtd.value), p = lerExpr(inpPreco.value);
     rotChk.textContent = `Atualizar também o preço do ${nomeMerc()} na pesquisa`;
     alerta.hidden = true;
+    const mid = it.mid || selMerc?.value;
+    const outro = !!mid && loja.outroTamanho(mes, it.p.id, mid, inpMarca.value);
+    if (outro !== eraOutro) { chk.checked = !outro; eraOutro = outro; }
     if (!q || typeof p !== 'number') { conta.textContent = 'Digite a quantidade e o preço por unidade.'; return; }
     const total = q * p;
+    if (outro) {
+      conta.replaceChildren(h('b', { class: 'num' }, `Total: ${fmtRS(total)}`), h('span', { style: { color: 'var(--suave)' } }, ' · outro tamanho: não entra na comparação com o orçado nem na pesquisa (a não ser que você marque abaixo).'));
+      return;
+    }
     const est = it.pago?.qtd !== undefined && it.semEst ? null : it.totalEst ?? null;
     conta.replaceChildren(h('b', { class: 'num' }, `Total: ${fmtRS(total)}`),
       est != null ? h('span', { class: 'num', style: { color: 'var(--suave)' } }, ` · orçado ${fmtRS(est)}${Math.abs(total - est) > 0.004 ? ` (${total > est ? '+' : '−'}${fmtRS(Math.abs(total - est))})` : ''}`) : null);
     // subiu 10% ou mais e outro mercado da rota tem mais barato: avisa ali mesmo
-    const mid = it.mid || selMerc?.value;
     const a = mid ? loja.alertaGondola(mes, it.p.id, mid, p) : null;
     if (a) {
       alerta.replaceChildren(h('span', null, `⚠️ Subiu ${a.pct}% (orçado ${fmtRS(a.ref)}). No ${a.alt.nome} está ${fmtRS(a.alt.preco)}${a.alt.marca ? ` (${a.alt.marca})` : ''}.`),
@@ -316,13 +325,14 @@ function gondola(it) {
     toast(`${it.p.nome} vai ser comprado no ${alt.nome}.`, { acao: { rotulo: 'Desfazer', fn: () => { desfazer(); app.render(); } } });
   };
   [inpQtd, inpPreco].forEach((x) => { x.addEventListener('input', pintar); x.addEventListener('focus', () => x.select()); });
+  inpMarca.addEventListener('input', pintar);
   selMerc?.addEventListener('change', pintar);
   const salvar = (pegar = true) => {
     const q = lerNumero(inpQtd.value), p = lerExpr(inpPreco.value);
     if (!q || typeof p !== 'number') { erro.textContent = 'Confira a quantidade e o preço.'; erro.hidden = false; return; }
     const mid = it.mid || selMerc?.value;
     if (!mid) { erro.textContent = 'Nenhum mercado na rota.'; erro.hidden = false; return; }
-    const desfazer = loja.pagarNoCaixa(mes, it.p.id, { mid, preco: p, qtd: q, atualizarPesquisa: chk.checked, pegar });
+    const desfazer = loja.pagarNoCaixa(mes, it.p.id, { mid, preco: p, qtd: q, marca: inpMarca.value, atualizarPesquisa: chk.checked, pegar });
     f.fechar();
     app.render();
     toast(`🏷️ ${it.p.nome}: ${fmtRS(q * p)}${pegar || it.ok ? ' no carrinho' : ' anotado'}.`, { acao: { rotulo: 'Desfazer', fn: () => { desfazer(); app.render(); } } });
@@ -334,6 +344,7 @@ function gondola(it) {
     h('div', { class: 'form' },
       selMerc ? h('label', null, 'Mercado', selMerc) : null,
       h('div', { class: 'grade2' }, h('label', null, 'Quantidade', inpQtd), h('label', null, 'Preço por unidade', inpPreco)),
+      h('label', null, 'Marca/tamanho na prateleira', inpMarca),
       conta,
       alerta,
       h('label', { class: 'check' }, chk, rotChk),

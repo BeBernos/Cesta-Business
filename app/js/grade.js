@@ -2,13 +2,15 @@
 // Enter desce para a mesma coluna do próximo produto; Tab anda para a direita.
 
 import { app } from './ctx.js';
-import { h, fmtRS, fmtN, fmtQ, lerExpr, campoMoeda, toast } from './ui.js';
+import { h, fmtRS, fmtN, fmtQ, lerExpr, campoMoeda, toast, icone } from './ui.js';
 import { lerNumero } from './modelo.js';
+import { fmtDieta } from './dieta.js';
 
 export const telaLarga = () => matchMedia('(min-width: 900px)').matches;
 
 // grupos: [{ c: categoria, lista: produtos }]
-export function montarGrade(grupos, { aoMudar, editar }) {
+// recolher uma categoria usa a mesma preferência da vista de cartões (prefs.recolhidas); buscando, abre tudo
+export function montarGrade(grupos, { aoMudar, editar, abrirTudo = false }) {
   const mercs = app.loja.mercados();
   const cab = h('thead', null,
     h('tr', null, h('th', { rowspan: 2, class: 'g-prod' }, 'Produto'), h('th', { rowspan: 2 }, 'Qtd.'),
@@ -16,9 +18,18 @@ export function montarGrade(grupos, { aoMudar, editar }) {
       h('th', { rowspan: 2 }, 'Menor preço'), h('th', { rowspan: 2 }, 'Mais barato'), h('th', { rowspan: 2 }, 'Total')),
     h('tr', null, mercs.map(() => [h('th', { class: 'g-sub' }, 'Preço'), h('th', { class: 'g-sub' }, 'Marca/tam.')])));
   const corpo = h('tbody');
+  const recolhidas = new Set(app.prefs.recolhidas || []);
   for (const { c, lista } of grupos) {
-    corpo.append(h('tr', { class: 'g-cat' }, h('td', { colspan: 5 + mercs.length * 2 }, `▸ ${c.nome}`)));
-    for (const p of lista) corpo.append(linha(p, mercs, aoMudar, editar));
+    const fechada = recolhidas.has(c.id) && !abrirTudo;
+    const alternar = () => {
+      const s = new Set(app.prefs.recolhidas || []);
+      if (s.has(c.id)) s.delete(c.id); else s.add(c.id);
+      app.prefs.recolhidas = [...s]; app.salvarPrefs(); app.render();
+    };
+    corpo.append(h('tr', { class: 'g-cat' }, h('td', { colspan: 5 + mercs.length * 2 },
+      h('button', { class: 'g-cat-bt', 'aria-expanded': String(!fechada), onclick: alternar },
+        icone(fechada ? 'chevR' : 'chevD'), c.nome, fechada ? h('small', null, ` · ${lista.length} ${lista.length === 1 ? 'produto' : 'produtos'}`) : null))));
+    if (!fechada) for (const p of lista) corpo.append(linha(p, mercs, aoMudar, editar));
   }
   return h('div', { class: 'grade-env' }, h('table', { class: 'grade' }, cab, corpo));
 }
@@ -42,7 +53,8 @@ function linha(p, mercs, aoMudar, editar) {
   });
   tr._qtd = qtd;
   tr._cel = new Map();
-  const tds = [h('td', { class: 'g-prod' }, h('button', { class: 'g-nome', title: 'Editar produto', onclick: () => editar(p.id) }, p.nome)), h('td', null, qtd)];
+  const dq = loja.dietaQtd(mes, p.id);
+  const tds = [h('td', { class: 'g-prod' }, h('button', { class: 'g-nome', title: 'Editar produto', onclick: () => editar(p.id) }, p.nome, dq ? h('small', { class: 'g-dieta' }, ` dieta: ${fmtDieta(dq.qtd, dq.unid)}`) : null)), h('td', null, qtd)];
   for (const m of mercs) {
     const preco = h('input', {
       class: 'g-in g-preco num', inputmode: 'decimal', dataset: { col: `p:${m.id}` }, 'aria-label': `Preço de ${p.nome} no ${m.nome}`,

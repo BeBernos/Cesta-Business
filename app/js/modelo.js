@@ -11,9 +11,11 @@
 //   p:<mes>:<pid>           produto      { nome, cat, qtd, obs }      (pid é o mesmo em todos os meses)
 //   r:<mes>:<pid>:<mid>     preço        { preco, marca, auto, obs }  (auto = marca copiada de outro mercado)
 //   k:<lista>:<pid>         modo compra  { ok, merc, faltou, pagoPreco, pagoQtd, estPreco, atualizou }
-//                           (ok = no carrinho, merc = mercado escolhido, pagoPreco/pagoQtd = preço e qtd vistos na gôndola)
+//                           (ok = no carrinho, merc = mercado escolhido, pagoPreco/pagoQtd = preço e qtd vistos na gôndola,
+//                            pagoMarca = marca/tamanho da gôndola, outroTam = tamanho diferente do pesquisado: preço não comparável)
 //   cm:<mes>                modo compra  { fora: [mid…] }             (mercados que não vou visitar)
-//   l:<lista>               lista        { nome, criado, orcamento, dieta }  (listas extras do mês e nome/limite da nº 1; dieta = { de, ate, quando })
+//   l:<lista>               lista        { nome, criado, orcamento, dieta, dietaQtd }  (listas extras do mês e nome/limite da nº 1; dieta = { de, ate, quando };
+//                                         dietaQtd = { pid: { qtd, unid } }: quanto a dieta pede, como na Mesa — a quantidade da lista é em embalagens)
 //   q:<lista>:<pid>         quantidade   { qtd }                      (só nas listas extras; a nº 1 usa p.qtd)
 //   oc:<lista>              orçado       { quando, total, itens: { pid: [preço, mid] } } (foto da lista na 1ª ação do Modo compra)
 //   mc:<pid>                marcas       { aceitas: [texto…] }        (vale para todos os meses; sem registro = qualquer marca)
@@ -500,7 +502,7 @@ export class Loja {
         faltou: todos.filter((m) => faltou.has(m.id)).map((m) => m.nome) };
       if (!mid) { semPreco.push(item); continue; }
       const l = c.linhas.find((x) => x.mid === mid);
-      item.mid = mid; item.marca = l.marca || c.marcaMenor;
+      item.mid = mid; item.marca = (temPago && k.pagoMarca) || l.marca || c.marcaMenor;
       item.preco = l.preco ?? k.pagoPreco ?? k.notaPreco;
       item.totalEst = item.preco * p.qtd;
       item.total = item.totalEst;
@@ -511,6 +513,8 @@ export class Loja {
       if (temPago) {
         item.pago = { preco: k.pagoPreco ?? item.preco, qtd: k.pagoQtd ?? p.qtd };
         item.total = item.pago.preco * item.pago.qtd;
+        // outro tamanho na gôndola: não dá para comparar com o orçado (o preço é de outra embalagem)
+        if (k.outroTam) { item.outroTam = true; item.totalEst = item.total; }
       }
       if (temNota) {
         item.nota = { preco: k.notaPreco, qtd: k.notaQtd ?? p.qtd };
@@ -1010,15 +1014,27 @@ export class Loja {
 
   // Preço e quantidade vistos na gôndola (pegar = já põe no carrinho). atualizarPesquisa grava o preço também na
   // pesquisa daquele mercado; o item fica preso nesse mercado para não "pular" de grupo.
-  pagarNoCaixa(mes, pid, { mid, preco = null, qtd = null, atualizarPesquisa = true, pegar = true }) {
+  // marca = marca/tamanho vista na gôndola (opcional). Com outro tamanho, o preço fica só na compra, a não ser que
+  // a pessoa peça para atualizar a pesquisa: aí vão o preço e a marca nova juntos.
+  pagarNoCaixa(mes, pid, { mid, preco = null, qtd = null, marca = null, atualizarPesquisa = true, pegar = true }) {
     return this.lote(() => {
       this.congelarOrcado(mes); // antes de mexer na pesquisa
       const k = this.get(`k:${mes}:${pid}`) || {};
       // guarda o preço pesquisado de antes, para mostrar a diferença mesmo depois de atualizar a pesquisa
       const antes = typeof k.estPreco === 'number' && k.merc === mid ? k.estPreco : this.preco(mes, pid, mid)?.preco ?? null;
-      this.set(`k:${mes}:${pid}`, { ...k, ok: pegar || !!k.ok, merc: mid, pagoPreco: preco, pagoQtd: qtd, estPreco: antes, atualizou: !!atualizarPesquisa });
+      const outroTam = this.outroTamanho(mes, pid, mid, marca);
+      this.set(`k:${mes}:${pid}`, { ...k, ok: pegar || !!k.ok, merc: mid, pagoPreco: preco, pagoQtd: qtd, pagoMarca: marca?.trim() || null, outroTam,
+        estPreco: antes, estMarca: k.atualizou && k.merc === mid && 'estMarca' in k ? k.estMarca : this.preco(mes, pid, mid)?.marca ?? '', atualizou: !!atualizarPesquisa });
       if (atualizarPesquisa && typeof preco === 'number') this.setPreco(mes, pid, mid, preco);
+      if (atualizarPesquisa && marca?.trim() && marca.trim() !== this.preco(mes, pid, mid)?.marca) this.setMarca(mes, pid, mid, marca.trim());
     });
+  }
+
+  // A marca/tamanho da gôndola tem outro tamanho que o pesquisado nesse mercado (ex.: 2 L em vez de 1 L)?
+  outroTamanho(mes, pid, mid, marca) {
+    const t = lerTamanho(marca || '');
+    const r = t && lerTamanho(this.preco(mes, pid, mid)?.marca || this.calcProduto(mes, pid).marcaMenor || '');
+    return !!r && (r.base !== t.base || r.qtd !== t.qtd);
   }
 
   // Não vou comprar este mês: zera a quantidade (o produto continua na lista de preços)
@@ -1033,7 +1049,8 @@ export class Loja {
     return this.lote(() => {
       const k = this.get(`k:${mes}:${pid}`) || {};
       if (k.atualizou && k.merc) this.setPreco(mes, pid, k.merc, typeof k.estPreco === 'number' ? k.estPreco : null);
-      this.set(`k:${mes}:${pid}`, { ...k, pagoPreco: null, pagoQtd: null, estPreco: null, atualizou: false });
+      if (k.atualizou && k.merc && k.pagoMarca && typeof k.estMarca === 'string' && k.estMarca !== k.pagoMarca) this._setR(mes, pid, k.merc, { marca: k.estMarca });
+      this.set(`k:${mes}:${pid}`, { ...k, pagoPreco: null, pagoQtd: null, pagoMarca: null, outroTam: false, estPreco: null, atualizou: false });
     });
   }
   setForaCompra(mes, mid, foraDaRota) {
@@ -1042,7 +1059,7 @@ export class Loja {
     this.set(`cm:${mes}`, { fora: [...fora] });
   }
   limparCompra(mes) {
-    return this.lote(() => { this.del(`oc:${mes}`); for (const [pid, k] of [...(this.ix.k.get(mes) || [])]) if (k.ok || k.faltou?.length || k.pagoPreco != null || k.pagoQtd != null) this.set(`k:${mes}:${pid}`, { ...k, ok: false, faltou: [], pagoPreco: null, pagoQtd: null, estPreco: null, atualizou: false }); });
+    return this.lote(() => { this.del(`oc:${mes}`); for (const [pid, k] of [...(this.ix.k.get(mes) || [])]) if (k.ok || k.faltou?.length || k.pagoPreco != null || k.pagoQtd != null) this.set(`k:${mes}:${pid}`, { ...k, ok: false, faltou: [], pagoPreco: null, pagoQtd: null, pagoMarca: null, outroTam: false, estPreco: null, atualizou: false }); });
   }
 
   // Gôndola cara: anota o preço visto (se quiser) e leva o item para outro mercado da rota
@@ -1051,7 +1068,7 @@ export class Loja {
       this.congelarOrcado(mes);
       if (atualizarPesquisa && typeof preco === 'number') this.setPreco(mes, pid, mid, preco);
       const k = this.get(`k:${mes}:${pid}`) || {};
-      this.set(`k:${mes}:${pid}`, { ...k, ok: false, merc: para, pagoPreco: null, pagoQtd: null, estPreco: null, atualizou: false });
+      this.set(`k:${mes}:${pid}`, { ...k, ok: false, merc: para, pagoPreco: null, pagoQtd: null, pagoMarca: null, outroTam: false, estPreco: null, atualizou: false });
     });
   }
 
@@ -1117,7 +1134,9 @@ export class Loja {
     return !t && base === 'un' ? c.menor : null;
   }
 
-  // Põe a dieta numa lista: itens = [{ pid, qtd, desc }]. Sem "para", cria (ou substitui) a lista "Dieta · Mês";
+  dietaQtd(lista, pid) { return this.ix.l.get(lista)?.dietaQtd?.[pid] || null; }
+
+  // Põe a dieta numa lista: itens = [{ pid, qtd, desc, dieta: { qtd, unid } }]. Sem "para", cria (ou substitui) a lista "Dieta · Mês";
   // com "para", soma as quantidades numa lista que já existe. Aprende os nomes ligados (como na nota fiscal).
   aplicarDieta(mes, itens, { de, ate, para = null } = {}) {
     mes = mesDe(mes);
@@ -1129,12 +1148,20 @@ export class Loja {
         for (const p of this.produtos(id)) if (p.qtd) this.setQtd(id, p.id, null);
       }
       const soma = new Map();
+      // quanto a dieta pede (g, ml, un), somado com o que já havia quando "para" soma numa lista
+      const dq = para ? { ...(this.ix.l.get(id)?.dietaQtd || {}) } : {};
       for (const i of itens) {
         if (!i.pid || !this.produto(id, i.pid)) continue;
         soma.set(i.pid, (soma.get(i.pid) || 0) + i.qtd);
+        if (i.dieta?.qtd != null) {
+          const a = dq[i.pid];
+          // shortcut: unidade diferente da que já estava substitui em vez de somar, raro (a Mesa usa uma unidade por alimento)
+          dq[i.pid] = { qtd: Math.round(((a?.unid === i.dieta.unid ? a.qtd : 0) + i.dieta.qtd) * 1000) / 1000, unid: i.dieta.unid };
+        }
         const kd = chaveDesc(i.desc || '');
         if (kd && this.ix.vd.get(kd)?.pid !== i.pid) this.set(`vd:${kd}`, { pid: i.pid, desc: i.desc });
       }
+      this.mesclar(`l:${id}`, { dietaQtd: dq });
       for (const [pid, q] of soma) this.setQtd(id, pid, Math.round(((para ? this.produto(id, pid).qtd || 0 : 0) + q) * 1000) / 1000);
     });
     return { id, desfazer };

@@ -20,10 +20,10 @@ where each item is cheapest and the best route of stores to visit, turns into a 
 electronic receipt afterwards to check what was really charged.**
 
 It was built for the person who does the family's shopping and has been used every month since October 2026, replacing a
-spreadsheet with one tab per month. Seventeen releases later it also prices the family's diet for the nutrition app (Mesa) and hands the family's feedback
+spreadsheet with one tab per month. Eighteen releases later it also prices the family's diet for the nutrition app (Mesa) and hands the family's feedback
 straight to Claude through its own connector.
 
-**At a glance:** 17 releases · used monthly since Oct 2026 · 5 stores × 147 products · 0 dependencies · works fully offline
+**At a glance:** 18 releases · used monthly since Oct 2026 · 5 stores × 147 products · 0 dependencies · works fully offline
 
 > The live demo opens with the ready-made list of 147 products and three months of **fictitious prices** in five stores,
 > generated in your browser. It works offline; nothing leaves your browser.
@@ -93,7 +93,7 @@ Details in [SECURITY.md](SECURITY.md).
 - **Receipt reader** tested against a real (anonymised) NFC-e, including codes, quantities, discounts and store mapping.
 - **Learning without AI** — product/receipt linking and category suggestions learn from what the family does, with rules
   that never guess when there's a tie.
-- **46 model and connector tests** plus a Playwright end-to-end run of the whole app: two phones, offline mode, receipts, the spreadsheet,
+- **47 model and connector tests** plus a Playwright end-to-end run of the whole app: two phones, offline mode, receipts, the spreadsheet,
   and the integration with the nutrition app with both Workers running locally.
 
 ## Tech stack

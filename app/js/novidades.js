@@ -6,6 +6,14 @@ import { h, folha } from './ui.js';
 
 export const NOVIDADES = [
   {
+    versao: '1.14.2', titulo: 'Ideias de vocês, feitas',
+    itens: [
+      ['🏷️', 'Outro tamanho na gôndola', 'No Modo compra, ao anotar o preço da gôndola dá para escrever a marca/tamanho da prateleira. Se for outro tamanho (2 L em vez de 1 L), o preço fica só nessa compra: não troca o preço pesquisado e não aparece como “mais caro” ou “mais barato” que o orçado.'],
+      ['📂', 'Recolher categorias no computador', 'Na planilha da aba Preços (computador), toque no nome da categoria para recolher ou abrir. Vale o mesmo que no celular.'],
+      ['🥗', 'Dieta: somar e quantidade da Mesa', 'Ao trazer a lista da dieta, dá para somar numa lista que já existe, inclusive na própria lista da dieta, sem apagar o que já estava. Cada item mostra quanto a Mesa pede (ex.: “dieta: 300g”), e a quantidade continua em embalagens para a conta do preço.'],
+    ],
+  },
+  {
     versao: '1.14.1', titulo: 'Ícone novo',
     itens: [
       ['🏷️', 'Ícone com o visual novo', 'O ícone do Cesta agora é uma etiqueta de gôndola com a cestinha e a fita verde do menor preço, igual ao resto do app. No celular ele troca sozinho em alguns dias; se quiser na hora, remova o atalho da tela inicial e instale o app de novo pelo Chrome (os dados continuam).'],

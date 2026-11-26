@@ -1,6 +1,6 @@
 // Service worker: guarda o app no celular para abrir sem internet.
 // Ao mudar qualquer arquivo do app, suba a versão em CACHE (e VERSAO em js/app.js).
-const CACHE = 'cesta-v18';
+const CACHE = 'cesta-v19';
 const ARQUIVOS = [
   './', 'app.css', 'manifest.webmanifest',
   'js/app.js', 'js/ctx.js', 'js/modelo.js', 'js/banco.js', 'js/sinc.js', 'js/ui.js', 'js/lista.js',
