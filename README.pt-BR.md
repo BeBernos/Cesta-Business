@@ -20,12 +20,13 @@ cada item sai mais barato e a melhor rota de mercados, vira lista de compra na h
 para conferir o que foi cobrado de verdade.**
 
 Foi feita para quem faz as compras da família e é usada todo mês desde outubro de 2026, no lugar de uma planilha com uma
-aba por mês. Catorze versões depois, ela também dá preço à dieta da família para o app de alimentação (Mesa).
+aba por mês. Dezesseis versões depois, ela também dá preço à dieta da família para o app de alimentação (Mesa) e entrega as ideias da
+família direto ao Claude, por um conector próprio.
 
-**Em números:** 14 versões · uso mensal desde out/2026 · 5 mercados × 147 produtos · 0 dependências · funciona 100% offline
+**Em números:** 16 versões · uso mensal desde out/2026 · 5 mercados × 147 produtos · 0 dependências · funciona 100% offline
 
-> A demonstração ao vivo abre com a lista pronta de 147 produtos e **preços fictícios** em cinco mercados, gerados no seu
-> navegador. Funciona offline; nada sai do seu navegador.
+> A demonstração ao vivo abre com a lista pronta de 147 produtos e três meses de **preços fictícios** em cinco mercados,
+> gerados no seu navegador. Funciona offline; nada sai do seu navegador.
 
 ## O que faz
 
@@ -40,7 +41,8 @@ aba por mês. Catorze versões depois, ela também dá preço à dieta da famíl
 - **Compra** — lista por mercado, rota sugerida, valor do mês, preço da gôndola com alerta quando passa 10% do previsto e está
   mais barato em outro mercado, compartilhada entre os celulares.
 - **Depois de pagar** — a NFC-e ligada aos produtos, códigos da loja aprendidos, cobrança a mais e item faltando apontados.
-- **Planilha** — importa e exporta o formato Excel original da família.
+- **Histórico** — economia no mês e no ano, a inflação do carrinho da família e os produtos que mais mudaram de preço.
+- **Planilha** — importa e exporta o formato Excel original da família; no computador, a tela de preços vira uma grade.
 
 ## Como funciona
 
@@ -59,6 +61,10 @@ opcional — um Durable Object do Cloudflare por família — que aplica exatame
 
 **Integrações** — Pelo Durable Object, a Cesta traz a lista de compras da dieta do app de alimentação (Mesa), converte gramas e mililitros em embalagens pelo tamanho da marca e devolve o preço por g/ml/unidade, para a Mesa mostrar o custo da dieta.
 
+**Conector do Claude** — O Worker também fala MCP (Streamable HTTP) num endereço secreto: o Claude lê as ideias e problemas que a família manda pelo app e, quando a mudança sai, marca como resolvido com uma resposta curta que aparece nos celulares na próxima sincronização.
+
+**Desenho** — O visual "Etiqueta" foi escolhido pela família entre três modelos: cada produto é uma etiqueta de gôndola (menor preço grande, centavos no alto, preço por kg embaixo), cor sempre tem significado (verde = mais barato, roxo = quantidade, âmbar = onde se digita o preço), ícones SVG de traço único, fonte variável local (Archivo) e gestos no mercado — deslizar para a direita põe no carrinho, para a esquerda é "não achei".
+
 ### O fluxo
 
 <p align="center"><img src="docs/images/flow-pt.png" alt="" width="100%"></p>
@@ -71,12 +77,14 @@ opcional — um Durable Object do Cloudflare por família — que aplica exatame
 | **A mesma regra em todo lugar** | Celulares e servidor convergem com `{k, u, v}` + lápides; sem casos especiais. |
 | **Texto copiado, não robô** | Respeita a proteção da Sefaz e não quebra quando a página muda. |
 | **Zero dependências** | Até o leitor/gerador de `.xlsx` é escrito à mão; nada para atualizar, nada para auditar além do nosso código. |
+| **Etiqueta, não tabela** | Quem está no mercado lê o preço do jeito que a loja mostra; a grade da planilha continua no computador. |
 
 ## Segurança
 
 A sincronização é protegida por uma senha da família que nunca sai do celular: o app manda um token SHA-256 e o servidor
 guarda só um hash dele. A leitura da nota descarta dados pessoais (CPF, nome, número de sócio). Links só são aceitos de
-`https://*.gov.br`. Detalhes em [SECURITY.md](SECURITY.md).
+`https://*.gov.br`. O conector do Claude mora num endereço aleatório de 48 caracteres que o servidor guarda só como hash.
+Detalhes em [SECURITY.md](SECURITY.md).
 
 ## Destaques de engenharia
 
@@ -85,13 +93,13 @@ guarda só um hash dele. A leitura da nota descarta dados pessoais (CPF, nome, n
 - **Leitor de nota** testado contra uma NFC-e real (anonimizada), com códigos, quantidades, descontos e o mercado da loja.
 - **Aprende sem IA** — o vínculo produto/nota e a sugestão de categoria aprendem com o que a família faz, com regras que
   nunca chutam quando há empate.
-- **44 testes do modelo** e um ponta a ponta com Playwright do app inteiro: dois celulares, offline, notas, planilha e a
+- **46 testes do modelo e do conector** e um ponta a ponta com Playwright do app inteiro: dois celulares, offline, notas, planilha e a
   integração com o app de alimentação com os dois Workers rodando localmente.
 
 ## Tecnologias
 
 JavaScript (ES2023, sem framework) · IndexedDB · Service Worker · CompressionStream (.xlsx) · Cloudflare Workers · Durable
-Objects (SQLite) · Service bindings · Claude (pedidos para copiar e colar) · test runner do Node · Playwright
+Objects (SQLite) · Service bindings · MCP (Streamable HTTP) · Claude (conector e pedidos para copiar e colar) · test runner do Node · Playwright
 
 ## Para ler mais
 

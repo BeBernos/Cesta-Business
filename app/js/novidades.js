@@ -6,6 +6,23 @@ import { h, folha } from './ui.js';
 
 export const NOVIDADES = [
   {
+    versao: '1.14.0', titulo: 'O Claude lê as ideias sozinho',
+    itens: [
+      ['💡', 'Sem copiar e colar', 'As ideias e problemas que vocês mandam em Mais → Ideias agora chegam sozinhas ao Claude, pelo “Conector do Claude” (ligue uma vez em Mais → Ideias). Quando a mudança fica pronta, ele mesmo marca como resolvida e deixa uma resposta aqui.'],
+    ],
+  },
+  {
+    versao: '1.13.0', titulo: 'Visual novo: cada produto é uma etiqueta',
+    itens: [
+      ['🏷️', 'Etiqueta de gôndola', 'Cada produto agora é uma etiqueta: o menor preço grande, com os centavos pequenos no alto, e o preço por kg ou litro embaixo, como na prateleira. A fita verde “MENOR” mostra que ele foi comparado entre os mercados.'],
+      ['💳', 'Resumo do mês no topo', 'Na aba Preços, a etiqueta grande mostra quanto vai dar a compra, quanto sobra do valor do mês, quanto vocês economizam escolhendo o mais barato e avisos (o que subiu, o que está sem preço, se dá para ir a menos mercados). Toque no aviso para ir direto.'],
+      ['👉', 'Compra com gestos', 'No Modo compra, deslize o item para a direita para pôr no carrinho e para a esquerda se não achar naquele mercado. Cada mercado mostra um anel com quantos itens já estão no carrinho.'],
+      ['📈', 'Histórico que conta a história', 'Quanto vocês economizaram no mês e no ano, a inflação do carrinho de vocês (os mesmos produtos de meses atrás) e o que mais subiu ou baixou. Toque num produto para ver as etiquetas de cada mês.'],
+      ['🎨', 'Cada cor com um sentido', 'Verde agora é só “mais barato”, roxo é a quantidade e âmbar é onde se digita o preço. A barra do valor do mês ficou azul enquanto cabe (âmbar perto do limite e vermelha quando passa). No Modo compra, a rota e as opções ficam em “Rota e opções”, logo abaixo do total.'],
+      ['🗂️', 'Mais organizado', 'A aba Mais agora tem blocos: as listas do mês, o assistente (otimizar, notas, dieta) e os ajustes em ícones, que abrem ali mesmo.'],
+    ],
+  },
+  {
     versao: '1.12.0', titulo: 'Custo da dieta',
     itens: [
       ['🥗', 'Quanto custa a dieta', 'Ao trazer a lista da dieta, a Cesta manda para o app da dieta (Mesa) o preço de cada item que já tem preço anotado. Lá aparece quanto custa a semana, e o Claude pode equilibrar custo e nutrição no próximo plano.'],

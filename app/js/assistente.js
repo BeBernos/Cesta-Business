@@ -125,11 +125,3 @@ function categoriasComClaude(lista) {
     h('div', { class: 'acoes lado' }, h('button', { class: 'btn fantasma', onclick: () => f.fechar() }, 'Fechar'), h('button', { class: 'btn prim', onclick: aplicar }, 'Aplicar')),
   ]);
 }
-
-// Bloco da aba Mais
-export function secaoAssistente() {
-  return h('div', { class: 'secao' },
-    h('h3', null, '🪄 Assistente'),
-    h('p', { class: 'sub' }, 'Arruma a lista sem custo: o que vocês costumam comprar, repetidos, categorias e embalagens. Para o resto, um texto pronto para perguntar ao Claude.'),
-    h('button', { class: 'btn prim bloco', onclick: () => abrirOtimizar() }, '🪄 Otimizar a lista'));
-}

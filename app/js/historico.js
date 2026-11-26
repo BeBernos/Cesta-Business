@@ -1,8 +1,9 @@
-// Histórico: preço de um produto ao longo dos meses, por mercado (gráfico + tabela).
+// Histórico: a história do mês (economia, total, inflação do carrinho, o que mudou) e o preço de um produto
+// ao longo dos meses, por mercado (etiquetas de cada mês, gráfico e tabela).
 
 import { app } from './ctx.js';
-import { h, fmtRS, fmtN } from './ui.js';
-import { norm, nomeMes } from './modelo.js';
+import { h, fmtRS, fmtN, icone, precoEtq } from './ui.js';
+import { norm, nomeMes, mesDe } from './modelo.js';
 
 const CORES = ['#60a5fa', '#f472b6', '#fb923c', '#a78bfa', '#22d3ee', '#f87171', '#e879f9', '#facc15', '#94a3b8'];
 const SVG = 'http://www.w3.org/2000/svg';
@@ -20,8 +21,9 @@ export function abrirHistorico(pid) { escolhido = pid; }
 
 export function telaHistorico(topo, tela) {
   const { loja } = app;
-  topo.append(h('div', { class: 'linha-topo' }, h('b', { style: { fontSize: '1.3rem' } }, '📈 Histórico'), h('div', { class: 'espaco' }), app.seloSinc()));
+  topo.append(h('div', { class: 'linha-topo' }, h('b', { class: 'titulo-topo' }, 'Histórico'), h('div', { class: 'espaco' }), app.seloSinc()));
   const meses = loja.meses();
+  historia(tela, meses);
   const mercs = loja.mercados({ todos: true });
   const cor = (mid) => CORES[Math.max(0, mercs.findIndex((m) => m.id === mid)) % CORES.length];
 
@@ -35,16 +37,16 @@ export function telaHistorico(topo, tela) {
     if (!t) { resultados.replaceChildren(); return; }
     const achados = linhagens.filter((l) => norm(l.nome).includes(t)).slice(0, 8);
     resultados.replaceChildren(...achados.map((l) => h('button', { class: `opcao${l.id === escolhido ? ' atual' : ''}`, onclick: () => { escolhido = l.id; termo = ''; app.render(); } },
-      h('span', { class: 'ic' }, '📦'), h('span', { class: 'tx' }, l.nome, h('small', null, loja.categorias().find((c) => c.id === l.cat)?.nome || '')))));
+      h('span', { class: 'ic' }, icone('tag')), h('span', { class: 'tx' }, l.nome, h('small', null, loja.categorias().find((c) => c.id === l.cat)?.nome || '')))));
     if (!achados.length) resultados.replaceChildren(h('p', { class: 'sub' }, 'Nenhum produto com esse nome.'));
   }
   pintarResultados();
-  tela.append(h('div', { class: 'secao' }, h('h3', null, '🔎 Preço de um produto'), h('p', { class: 'sub' }, 'Veja como o preço mudou mês a mês em cada mercado.'), busca, h('div', { style: { height: '8px' } }), resultados));
+  tela.append(h('div', { class: 'secao' }, h('h3', { class: 'trilho' }, 'Preço de um produto'), h('p', { class: 'sub' }, 'Veja como o preço mudou mês a mês em cada mercado.'), busca, h('div', { style: { height: '8px' } }), resultados));
 
   if (escolhido && linhagens.some((l) => l.id === escolhido)) {
     const l = linhagens.find((x) => x.id === escolhido);
     const hist = loja.historico(escolhido);
-    const sec = h('div', { class: 'secao' }, h('h3', null, l.nome));
+    const sec = h('div', { class: 'secao' }, h('h3', { class: 'trilho' }, l.nome));
     if (!hist.series.length) {
       sec.append(h('p', { class: 'sub' }, 'Ainda não há preços deste produto em nenhum mês.'));
     } else {
@@ -58,8 +60,15 @@ export function telaHistorico(topo, tela) {
         const [a] = valid[valid.length - 2], [b] = valid[valid.length - 1];
         const pct = ((b - a) / a) * 100;
         sec.append(h('p', { class: 'sub' }, 'Menor preço: ', h('b', { class: 'num' }, fmtRS(b)), ' · ',
-          h('span', { class: pct > 0.5 ? 'var-sobe' : pct < -0.5 ? 'var-desce' : '' }, `${pct > 0 ? '▲' : pct < 0 ? '▼' : '='} ${Math.abs(pct).toFixed(1).replace('.', ',')}% em relação ao mês anterior`)));
+          h('span', { class: pct > 0.5 ? 'var-sobe' : pct < -0.5 ? 'var-desce' : '' }, pct ? icone(pct > 0 ? 'up' : 'down') : '= ', `${Math.abs(pct).toFixed(1).replace('.', ',')}% em relação ao mês anterior`)));
       }
+      // as etiquetas de cada mês (menor preço), a mais recente destacada
+      sec.append(h('div', { class: 'etq-meses' }, rot.slice(-6).map((m, i, arr) => {
+        const v = menores[rot.indexOf(m)];
+        const antes = i ? menores[rot.indexOf(arr[i - 1])] : null;
+        return h('div', { class: `mini-etq${i === arr.length - 1 ? ' atual' : ''}${i === arr.length - 1 && antes != null && v > antes ? ' subiu' : ''}` },
+          h('small', { class: 'trilho' }, nomeMes(m, true)), precoEtq(v, { cifrao: false }));
+      })));
       sec.append(graficoLinhas(rot.map((m) => nomeMes(m, true)), series),
         h('div', { class: 'legenda' }, series.map((se) => h('span', null, h('i', { style: { background: se.cor } }), se.nome))));
       const tabela = h('table', { class: 'tabela num' },
@@ -76,10 +85,10 @@ export function telaHistorico(topo, tela) {
   const totais = meses.map((m) => loja.listas(m).map((l) => loja.calcMes(l))
     .reduce((t, c) => ({ m, totalGeral: t.totalGeral + c.totalGeral, comQtd: t.comQtd + c.comQtd }), { m, totalGeral: 0, comQtd: 0 }))
     .filter((t) => t.totalGeral > 0);
-  const sec2 = h('div', { class: 'secao' }, h('h3', null, '🧾 Total do mês no menor preço'),
+  const sec2 = h('div', { class: 'secao' }, h('h3', { class: 'trilho' }, 'Total do mês no menor preço'),
     h('p', { class: 'sub' }, 'Quanto daria a compra de cada mês comprando cada item onde estava mais barato.'));
   if (totais.length) {
-    sec2.append(graficoBarras(totais.map((t) => nomeMes(t.m, true)), totais.map((t) => t.totalGeral)));
+    sec2.append(graficoBarras(totais.map((t) => nomeMes(t.m, true)), totais.map((t) => t.totalGeral), totais.findIndex((t) => t.m === mesDe(app.mes))));
     sec2.append(h('div', { class: 'rolavel' }, h('table', { class: 'tabela num' },
       h('thead', null, h('tr', null, h('th', null, 'Mês'), h('th', null, 'Itens'), h('th', null, 'Total'), h('th', null, 'Valor do mês'))),
       h('tbody', null, totais.map((t) => {
@@ -89,6 +98,41 @@ export function telaHistorico(topo, tela) {
       })))));
   } else sec2.append(h('p', { class: 'sub' }, 'Ainda não há meses com preços e quantidades.'));
   tela.append(sec2);
+}
+
+// A história: quanto economizaram, o total por mês, a inflação do carrinho e o que mais mudou
+function historia(tela, meses) {
+  const { loja } = app;
+  const atual = mesDe(app.mes);
+  const anteriores = meses.filter((m) => m < atual);
+  const eco = loja.economiaMes(atual);
+  const ano = meses.filter((m) => m.slice(0, 4) === atual.slice(0, 4) && m <= atual).reduce((s, m) => s + loja.economiaMes(m), 0);
+  const blocos = [h('section', { class: 'etq-mes' },
+    h('div', { class: 'etq-mes-val' }, h('div', { class: 'etq-mes-valor' }, precoEtq(eco)),
+      h('span', { class: 'de-valor' }, `economia em ${nomeMes(atual).split(' ')[0].toLowerCase()}`)),
+    h('div', { class: 'etq-mes-linha' }, h('span', null, 'no mais barato × média dos outros mercados'), h('span', null, `No ano `, h('b', { class: 'num verde' }, fmtRS(ano)))))];
+  const base = anteriores.slice(-3)[0];
+  const inf = base ? loja.inflacao(base, atual) : null;
+  if (inf) {
+    blocos.push(h('div', { class: 'faixa-hist' }, h('span', { class: 'trilho' }, 'Inflação do carrinho de vocês'),
+      h('b', { class: `num ${inf.pct > 0 ? 'var-sobe' : 'var-desce'}` }, `${inf.pct > 0 ? '+' : ''}${fmtN(inf.pct).replace(/0$/, '')}%`)),
+      h('p', { class: 'sub hist-sub' }, `Os mesmos ${inf.n} produtos, ${nomeMes(base).split(' ')[0].toLowerCase()} → ${nomeMes(atual).split(' ')[0].toLowerCase()}, no menor preço de cada mês.`));
+  }
+  const ant = anteriores.at(-1);
+  if (ant) {
+    const v = loja.variacoes(ant, atual).filter((x) => Math.abs(x.pct) >= 3);
+    const subiram = v.filter((x) => x.pct > 0).slice(0, 3), baixaram = v.filter((x) => x.pct < 0).slice(-2).reverse();
+    if (subiram.length || baixaram.length) {
+      const botao = (x) => h('button', { class: 'mudou', onclick: () => { escolhido = x.p.id; app.render(); } },
+        h('span', null, x.p.nome), h('b', { class: `num ${x.pct > 0 ? 'var-sobe' : 'var-desce'}` }, icone(x.pct > 0 ? 'up' : 'down'), `${fmtN(Math.abs(x.pct)).replace(/,?0+$/, '')}%`));
+      blocos.push(h('div', { class: 'faixa-hist' }, h('span', { class: 'trilho' }, `O que mais mudou desde ${nomeMes(ant).split(' ')[0].toLowerCase()}`)),
+        h('div', { class: 'lista-mudou' }, subiram.map(botao),
+          subiram.length ? null : h('p', { class: 'nada-mudou' }, 'Nada subiu 3% ou mais.'),
+          baixaram.map(botao),
+          baixaram.length ? null : h('p', { class: 'nada-mudou' }, 'Nada baixou 3% ou mais.')));
+    }
+  }
+  tela.append(...blocos);
 }
 
 function escala(min, max) {
@@ -119,22 +163,29 @@ function graficoLinhas(rotulos, series) {
   return svg;
 }
 
-function graficoBarras(rotulos, valores) {
+// Passo "redondo" para o eixo (1, 2, 2,5 ou 5 × 10ⁿ)
+function passoRedondo(v) {
+  const p = 10 ** Math.floor(Math.log10(v));
+  return [1, 2, 2.5, 5, 10].map((k) => k * p).find((x) => x >= v);
+}
+
+function graficoBarras(rotulos, valores, destaque = -1) {
   const W = 360, H = 200, L = 52, R = 10, T = 18, B = 26;
-  const max = Math.max(...valores) * 1.12;
+  const passoY = passoRedondo(Math.max(...valores) / 4);
+  const max = passoY * Math.ceil((Math.max(...valores) * 1.08) / passoY);
   const n = valores.length;
   const passo = (W - L - R) / n;
   const bw = Math.min(42, passo * 0.62);
   const y = (v) => T + (H - T - B) * (1 - v / max);
   const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, class: 'grafico', role: 'img', 'aria-label': 'Total por mês' });
-  for (let k = 0; k <= 3; k++) {
-    const v = (max * k) / 3;
-    svg.append(s('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), class: 'grade' }), s('text', { x: L - 6, y: y(v) + 4, 'text-anchor': 'end' }, Math.round(v)));
+  for (let v = 0; v <= max + 0.001; v += passoY) {
+    svg.append(s('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), class: 'grade' }), s('text', { x: L - 6, y: y(v) + 4, 'text-anchor': 'end' }, fmtN(v).replace(/,00$/, '')));
   }
   valores.forEach((v, i) => {
     const cx = L + passo * i + passo / 2;
-    svg.append(s('rect', { x: cx - bw / 2, y: y(v), width: bw, height: y(0) - y(v), rx: 6, fill: 'var(--petroleo)' }, s('title', {}, `${rotulos[i]}: ${fmtRS(v)}`)),
-      s('text', { x: cx, y: H - 8, 'text-anchor': 'middle' }, rotulos[i]),
+    const atual = i === destaque;
+    svg.append(s('rect', { x: cx - bw / 2, y: y(v), width: bw, height: y(0) - y(v), rx: 6, fill: 'var(--petroleo)', 'fill-opacity': destaque < 0 || atual ? 1 : 0.4 }, s('title', {}, `${rotulos[i]}: ${fmtRS(v)}`)),
+      s('text', { x: cx, y: H - 8, 'text-anchor': 'middle', style: atual ? 'fill: var(--texto); font-weight: 750' : '' }, rotulos[i]),
       s('text', { x: cx, y: y(v) - 5, 'text-anchor': 'middle', style: 'fill: var(--texto); font-weight: 700; font-size: 10px' }, Math.round(v)));
   });
   return svg;

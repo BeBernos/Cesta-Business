@@ -14,6 +14,7 @@ phones; the optional server only stores what it cannot read the password for, an
 | Personal data on receipts | The receipt reader keeps store, items, prices and the access key; the buyer's tax ID, name and membership numbers are discarded on parsing and never stored. Test fixtures are anonymised. |
 | Phishing through "receipt links" | Only `https://` links on `*.gov.br` with a valid receipt access key are opened; anything else is refused. |
 | Scraping a protected public service | The app never fetches the tax authority's page automatically (it is protected against bots); the user copies the page text. |
+| Someone guesses the Claude connector address | The MCP endpoint is `/api/mcp/<48 random hex chars>`; the server stores only its SHA-256, only the family password can create, rotate or switch it off, and it exposes just two tools: read the family's feedback and answer it. A wrong address gets a plain 404. |
 | Other apps of the suite | The nutrition app is reached only through a private service binding; Cesta receives `{category, name, quantity, unit}` and sends back `{name, unit, price}` — nothing else. |
 
 ## Reporting
@@ -33,4 +34,6 @@ servidor opcional não tem a senha, e dados pessoais nunca são guardados.**
 - **Dados pessoais da nota:** CPF, nome e número de sócio são descartados na leitura e nunca guardados.
 - **Links falsos:** só `https://` em `*.gov.br` com chave de acesso válida.
 - **Robô na Sefaz:** nunca; o usuário copia o texto da página.
+- **Conector do Claude:** endereço aleatório de 48 caracteres, guardado só como hash; só a senha da família liga, troca ou
+  desliga; dá acesso apenas a ler e responder as ideias e problemas da família.
 - **Apps do conjunto:** só por ligação privada entre Workers; a Cesta recebe a lista de compras da dieta e devolve preços.

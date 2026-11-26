@@ -1,11 +1,12 @@
 // Service worker: guarda o app no celular para abrir sem internet.
 // Ao mudar qualquer arquivo do app, suba a versão em CACHE (e VERSAO em js/app.js).
-const CACHE = 'cesta-v14';
+const CACHE = 'cesta-v17';
 const ARQUIVOS = [
   './', 'app.css', 'manifest.webmanifest',
   'js/app.js', 'js/ctx.js', 'js/modelo.js', 'js/banco.js', 'js/sinc.js', 'js/ui.js', 'js/lista.js',
   'js/compra.js', 'js/orcamento.js', 'js/historico.js', 'js/ajustes.js', 'js/planilha.js', 'js/padrao.js', 'js/novidades.js',
   'js/marcas.js', 'js/grade.js', 'js/nota.js', 'js/notas.js', 'js/dieta.js', 'js/assistente.js', 'js/demo.js',
+  'fonts/archivo.woff2',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png',
 ];
 

@@ -1,7 +1,7 @@
 // Valor para gastar no mês (o limite do cartão, VR ou débito): definir e mostrar se a lista cabe.
 
 import { app } from './ctx.js';
-import { h, fmtRS, fmtN, folha, toast, fecharTodas } from './ui.js';
+import { h, fmtRS, fmtN, folha, toast, fecharTodas, icone } from './ui.js';
 import { lerExpr, nomeMes, mesDe } from './modelo.js';
 
 export const ROTULO = { ok: 'Dentro do valor', quase: 'Quase no limite', passou: 'Passou do valor' };
@@ -24,15 +24,15 @@ export function frase(o) {
 export function cartao(o, { compra = false } = {}) {
   if (o.estado === 'sem') {
     return h('button', { class: 'orc-cartao sem', onclick: () => abrirValor() },
-      h('span', { class: 'ic' }, '💳'),
+      h('span', { class: 'ic' }, icone('card')),
       h('span', { class: 'tx' }, h('b', null, 'Quanto vocês têm para gastar este mês?'),
         h('small', null, 'Defina o valor do cartão/VR e o app avisa se a lista cabe.')));
   }
   const pctTxt = `${Math.round((o.planejado / o.valor) * 100)}%`;
   return h('div', { class: `orc-cartao ${o.estado}` },
     h('div', { class: 'orc-topo' },
-      h('span', { class: 'orc-selo' }, o.estado === 'passou' ? '⚠️ ' : o.estado === 'quase' ? '⚡ ' : '✅ ', ROTULO[o.estado]),
-      h('button', { class: 'btn pequeno fantasma', onclick: () => (o.lista ? abrirValor(o.lista, { lista: true }) : abrirValor()) }, '✎ Valor')),
+      h('span', { class: 'orc-selo' }, ROTULO[o.estado]),
+      h('button', { class: 'btn pequeno fantasma', onclick: () => (o.lista ? abrirValor(o.lista, { lista: true }) : abrirValor()) }, icone('pencil'), 'Valor')),
     h('div', { class: 'orc-numeros' },
       h('div', null, h('small', null, o.lista ? 'Limite da lista' : 'Valor do mês'), h('b', { class: 'num' }, fmtRS(o.valor))),
       h('div', null, h('small', null, o.porLista ? 'Todas as listas' : 'Lista de compras'), h('b', { class: 'num' }, fmtRS(o.planejado))),
@@ -41,7 +41,7 @@ export function cartao(o, { compra = false } = {}) {
     o.porLista ? h('div', { class: 'orc-rodape num' }, o.porLista.map((x) => `${x.nome}: ${fmtRS(x.total)}`).join(' + ')) : null,
     h('div', { class: 'orc-rodape num' }, `${pctTxt} do valor`, compra ? ` · no carrinho ${fmtRS(o.noCarrinho)}` : ''),
     o.pagos ? h('p', { class: 'orc-nota', style: { color: o.difCaixa > 0 ? 'var(--perigo)' : 'var(--verde)' } },
-      `🏷️ ${o.pagos} ${o.pagos === 1 ? 'item' : 'itens'} com preço real (gôndola ou nota): ${o.difCaixa === 0 ? 'igual ao orçado' : `${o.difCaixa > 0 ? '+' : '−'}${fmtRS(Math.abs(o.difCaixa))} em relação ao orçado`}.`) : null,
+      `${o.pagos} ${o.pagos === 1 ? 'item' : 'itens'} com preço real (gôndola ou nota): ${o.difCaixa === 0 ? 'igual ao orçado' : `${o.difCaixa > 0 ? '+' : '−'}${fmtRS(Math.abs(o.difCaixa))} em relação ao orçado`}.`) : null,
     o.foraLista ? h('p', { class: 'orc-nota' }, `🧾 Inclui ${fmtRS(o.foraLista)} de itens da nota fiscal que estavam fora da lista.`) : null,
     o.semPreco ? h('p', { class: 'orc-nota' }, `${o.semPreco} ${o.semPreco === 1 ? 'item sem preço não entra' : 'itens sem preço não entram'} na conta — o total real pode ser maior.`) : null,
     o.estado === 'passou' && !compra ? h('div', { class: 'orc-cortar' },

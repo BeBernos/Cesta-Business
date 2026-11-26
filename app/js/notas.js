@@ -2,7 +2,7 @@
 // A página da Sefaz bloqueia acesso automático, então quem abre a nota é a própria pessoa, no navegador dela.
 
 import { app } from './ctx.js';
-import { h, fmtRS, fmtQ, folha, confirmar, toast, fecharTodas } from './ui.js';
+import { h, fmtRS, fmtQ, folha, confirmar, toast, fecharTodas, icone } from './ui.js';
 import { lerNota, linkDeNota } from './nota.js';
 import { norm, mesDe } from './modelo.js';
 import { copiarPromptNota } from './assistente.js';
@@ -209,9 +209,9 @@ export function blocoNotas({ titulo = true } = {}) {
   const notas = loja.notas().filter((n) => mesDe(n.lista) === mesDe(app.mes));
   const nomeMerc = (mid) => loja.mercados({ todos: true }).find((m) => m.id === mid)?.nome || '';
   return h('div', { class: titulo ? 'secao' : 'nf-notas' },
-    titulo ? h('h3', null, '🧾 Notas fiscais') : null,
+    titulo ? h('h3', null, icone('receipt'), 'Notas fiscais') : null,
     titulo ? h('p', { class: 'sub' }, 'Confira a nota da compra: o app mostra o que foi cobrado acima da gôndola, o que não foi cobrado e o que estava fora da lista.') : null,
-    h('button', { class: `btn bloco${titulo ? ' prim' : ''}`, onclick: conferirNota }, '🧾 Conferir nota fiscal'),
+    h('button', { class: `btn bloco${titulo ? ' prim' : ''}`, onclick: conferirNota }, icone('receipt'), 'Conferir nota fiscal'),
     titulo && loja.nomesAprendidos().length ? h('button', { class: 'btn fantasma bloco', style: { marginTop: '8px' }, onclick: nomesAprendidos }, `🔗 Nomes aprendidos — nota e dieta (${loja.nomesAprendidos().length})`) : null,
     notas.length ? h('div', { class: 'lista-ed', style: { marginTop: '8px' } }, notas.map((n) => {
       const au = loja.auditarNota(n.chave);

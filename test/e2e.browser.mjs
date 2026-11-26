@@ -27,6 +27,8 @@ async function abrir() {
 const print = async (p, nome) => { if (PRINTS) await p.screenshot({ path: `${PRINTS}/${nome}.png` }); };
 const total = (p) => p.evaluate(() => __cesta.loja.calcMes(__cesta.mes).totalGeral);
 const passo = (t) => console.log(`✓ ${t}`);
+// Mais (1.13): cada ajuste abre embaixo da grade de ícones; toca só se ainda não estiver aberto
+const ajuste = async (p, nome) => { const t = p.locator(`.aj:has-text("${nome}")`); if ((await t.getAttribute('aria-pressed')) !== 'true') await t.click(); };
 
 // ---------- celular A ----------
 const { ctx: ctxA, p: a } = await abrir();
@@ -70,7 +72,7 @@ const card = a.locator('.card').first();
 await card.locator('input.preco').fill('22,90');
 await card.locator('input.marca').fill('Ypê 5L');
 await card.locator('.qtd button[aria-label=Aumentar]').click();
-await a.click('.chip:has-text("Atacadão ✕")');
+await a.click('.chip[aria-pressed="true"]:has-text("Atacadão")');
 await card.locator('.card-nome').click();
 await card.locator('.lm[data-mid] input.preco').nth(1).fill('23,99');
 await card.locator('.lm[data-mid] input.preco').nth(3).fill('55,10/2');
@@ -104,6 +106,7 @@ passo('critério 4: Banha incluída em Mercearia (com aviso de nome repetido) e 
 
 // Critério 2: mercado "Extra" aparece em todos os produtos e entra na comparação
 await a.click('nav#abas button:has-text("Mais")');
+await ajuste(a, 'Mercados');
 await a.click('button:has-text("Novo mercado")');
 await a.fill('.folha input.entrada', 'Extra');
 await a.click('.folha .btn.prim');
@@ -121,6 +124,7 @@ passo('critério 2: Extra aparece em todos os produtos e já é o mais barato');
 
 // Critério 3: excluir mercado arquivando → totais recalculados
 await a.click('nav#abas button:has-text("Mais")');
+await ajuste(a, 'Mercados');
 await a.click('button[aria-label="Excluir Extra"]');
 await a.click('.folha .btn:has-text("Arquivar")');
 await a.waitForTimeout(300);
@@ -130,6 +134,7 @@ assert.ok(await a.locator('details summary:has-text("Arquivados (1)")').count())
 passo('critério 3: Extra arquivado, total volta a R$ 22,90 (preço do Extra guardado)');
 
 // Critério 1: criar Novembro copiando Outubro sem trazer preços
+await ajuste(a, 'Meses');
 await a.click('button:has-text("Mês novo copiando")');
 assert.equal(await a.locator('.folha select').first().inputValue(), '2026-11');
 await print(a, '04-criar-mes');
@@ -154,6 +159,7 @@ passo('repetir as quantidades do mês anterior com um toque');
 
 // Criar mês do zero
 await a.click('nav#abas button:has-text("Mais")');
+await ajuste(a, 'Meses');
 await a.click('button:has-text("Mês do zero")');
 assert.equal(await a.locator('.folha select').first().inputValue(), '2026-12');
 await a.click('.folha .btn.prim:has-text("Criar mês")');
@@ -200,6 +206,7 @@ passo('valor do mês: verde dentro do valor, vermelho e aviso quando passa, suge
 
 // Sincronização: A cria a senha da família
 await a.click('nav#abas button:has-text("Mais")');
+await ajuste(a, 'Sincronizar');
 await a.click('button:has-text("Ligar sincronização")');
 await a.fill('.folha input.entrada', 'familia-teste-123');
 await a.click('.folha .btn.prim');
@@ -228,7 +235,7 @@ await bb.reload();
 await bb.waitForSelector('#topo', { timeout: 10000 });
 await bb.click('nav#abas button:has-text("Compra")');
 await bb.waitForSelector('.grupo');
-const grupos = await bb.locator('.grupo-cab .tit b').allInnerTexts();
+const grupos = await bb.locator('.grupo-cab .tit b').allTextContents();
 assert.deepEqual(grupos, ['No Atacadão', 'No Assaí', "No Sam's Club", 'Sem preço pesquisado']);
 await print(bb, '05-compra-offline');
 await bb.locator('.ic-compra:has-text("Leite desnatado") .marca-cx').click();
@@ -325,6 +332,7 @@ passo(`lista “com o que faltou”: Outubro nº 2 criada com ${nova.itens.lengt
 
 // Feedback: envia, guarda a tela de origem e muda o status
 await a.click('nav#abas button:has-text("Mais")');
+await ajuste(a, 'Ideias');
 await a.click('button:has-text("Enviar ideia ou problema")');
 await a.click('.folha .chip:has-text("Ideia")');
 await a.fill('.folha textarea', 'Ordenar o modo compra pelos corredores do mercado');
@@ -340,11 +348,28 @@ await a.waitForTimeout(300);
 assert.equal(await a.evaluate(() => __cesta.loja.feedbacks()[0].status), 'resolvido');
 await print(a, '12-feedback');
 passo('feedback: enviado com tela e versão, e marcado como resolvido');
+
+// Conector do Claude: gera o endereço, o Claude lê os feedbacks pelo servidor e responde; o celular recebe a resposta
+await a.click('button:has-text("Gerar endereço")');
+const urlMcp = await a.locator('.aviso code').textContent();
+assert.match(urlMcp, /\/api\/mcp\/[0-9a-f]{48}$/);
+await a.waitForFunction(() => __cesta.sinc.s.pendentes.size === 0, null, { timeout: 15000 });
+const mcp = async (method, params) => (await (await fetch(urlMcp, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) })).json()).result;
+assert.equal((await mcp('initialize', { protocolVersion: '2025-06-18' })).serverInfo.name, 'cesta');
+const lidos = JSON.parse((await mcp('tools/call', { name: 'feedbacks', arguments: { todos: true } })).content[0].text);
+assert.deepEqual(lidos.map((f) => [f.id, f.texto]), [[fb.id, 'Ordenar o modo compra pelos corredores do mercado']]);
+assert.equal((await mcp('tools/call', { name: 'responder_feedback', arguments: { id: fb.id, status: 'andamento', resposta: 'Vem na próxima versão' } })).isError, false);
+await a.evaluate(() => __cesta.sinc.sincronizar());
+await a.waitForFunction((id) => __cesta.loja.feedbacks().find((f) => f.id === id)?.status === 'andamento', fb.id, { timeout: 15000 });
+assert.equal((await fetch(urlMcp.replace(/.{4}$/, '0000'), { method: 'POST', body: '{}' })).status, 404);
+await print(a, '12b-conector');
+passo('conector do Claude: lê os feedbacks pelo servidor e a resposta chega ao celular');
 await a.evaluate(() => __cesta.irMes('2026-10'));
 await a.click('nav#abas button:has-text("Preços")');
 
 // Excel: exportar gera um .xlsx que o próprio app lê
 await a.click('nav#abas button:has-text("Mais")');
+await ajuste(a, 'Excel');
 const [down] = await Promise.all([a.waitForEvent('download'), (async () => { await a.click('button:has-text("Exportar .xlsx")'); await a.click('.folha .btn.prim'); })()]);
 const caminho = await down.path();
 assert.ok(caminho && down.suggestedFilename().endsWith('.xlsx'));
@@ -375,6 +400,18 @@ const vis = await a.locator('.ic-compra:visible').allInnerTexts();
 assert.ok(vis.length >= 1 && vis.every((t) => /leite/i.test(t)), 'busca mostra só o que bate');
 await a.fill('.busca-compra input', '');
 passo('rota sugerida (usar e desfazer) e busca no modo compra');
+
+// Gesto (1.13): deslizar o item para a direita põe no carrinho; de novo, tira
+const arrastar = async (loc) => { await loc.evaluate((el) => el.scrollIntoView({ block: "center" })); await a.waitForTimeout(150); const bx = await loc.boundingBox(); const y = bx.y + bx.height / 2;
+  await a.mouse.move(bx.x + 40, y); await a.mouse.down(); await a.mouse.move(bx.x + 100, y, { steps: 5 }); await a.mouse.move(bx.x + 160, y, { steps: 5 }); await a.mouse.up(); await a.waitForTimeout(300); };
+const okAntes = await a.locator('.ic-compra.ok').count();
+const alvo = a.locator('.ic-deslize:has(.ic-compra:not(.ok))').first();
+const nomeAlvo = (await alvo.getAttribute('data-nome')).split(' ')[0];
+await arrastar(alvo);
+assert.equal(await a.locator('.ic-compra.ok').count(), okAntes + 1, `deslizar marcou ${nomeAlvo}`);
+await arrastar(a.locator(`.ic-deslize:has(.ic-compra.ok):has-text("${nomeAlvo}")`).first());
+assert.equal(await a.locator('.ic-compra.ok').count(), okAntes, 'deslizar de novo tira do carrinho');
+passo(`gesto: deslizar ${nomeAlvo} põe e tira do carrinho`);
 
 // Enviar lista (estava quebrado desde a 1.5): copia o texto quando não há "compartilhar"
 await ctxA.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(URL_APP).origin });
@@ -492,6 +529,7 @@ assert.equal(await a.evaluate(() => { const l = __cesta.loja; const b = l.produt
 await a.click('.toast:has-text("produto mudou") button:has-text("Desfazer")');
 await a.waitForTimeout(200);
 // nota sem QR: o pedido para o Claude vai para a área de transferência
+if ((await a.locator('.mais-linha:has-text("Notas fiscais")').getAttribute('aria-expanded')) !== 'true') await a.click('.mais-linha:has-text("Notas fiscais")');
 await a.click('button:has-text("Conferir nota fiscal")');
 await a.click('.folha button:has-text("Nota sem QR code")');
 assert.match(await a.evaluate(() => navigator.clipboard.readText()), /foto de um cupom fiscal[\s\S]*Vl\. Unit\.: 0,00 Vl\. Total 0,00/);
@@ -567,6 +605,7 @@ passo('excluir produto pela aba Preços (só deste mês)');
 // Produtos dentro da categoria (Mais → Categorias e produtos → Mercearia)
 await a.fill('input[type=search]', '');
 await a.click('nav#abas button:has-text("Mais")');
+await ajuste(a, 'Categorias');
 await a.click('summary:has-text("Ver e editar as")');
 await a.click('button[aria-label="Produtos de Mercearia"]');
 await a.waitForSelector('.folha h2:has-text("Mercearia")');
