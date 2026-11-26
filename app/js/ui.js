@@ -163,4 +163,55 @@ export function escolherArquivo(accept) {
   });
 }
 
+// Ícones desenhados (traço único), no lugar dos emojis nas telas principais
+const IC = {
+  tag: '<path d="M3 12V4h8l9 9-8 8z"/><circle cx="7.5" cy="7.5" r="1.4"/>',
+  cart: '<path d="M3 4h2l2.4 11h10.2L20 7H6.2"/><circle cx="9" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/>',
+  chart: '<path d="M3 20h18M6 17v-5M11 17V6M16 17v-3M20 17V9"/>',
+  grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/>',
+  search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+  x: '<path d="M6 6l12 12M18 6 6 18"/>',
+  chevD: '<path d="m6 9 6 6 6-6"/>',
+  chevR: '<path d="m9 6 6 6-6 6"/>',
+  chevU: '<path d="m6 15 6-6 6 6"/>',
+  up: '<path d="M7 17 17 7M9 7h8v8"/>',
+  down: '<path d="M7 7l10 10M17 9v8H9"/>',
+  receipt: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
+  share: '<path d="M12 3v12M7 8l5-5 5 5M5 14v5h14v-5"/>',
+  wand: '<path d="m4 20 11-11M15 4l.8 1.7L17.5 6.5l-1.7.8L15 9l-.8-1.7L12.5 6.5l1.7-.8z"/>',
+  leaf: '<path d="M5 19c0-8 5-13 14-14 0 9-5 14-13 14z"/><path d="M5 19l7-7"/>',
+  store: '<path d="M4 9l1.5-5h13L20 9M4 9h16v11H4zM9.5 20v-5.5h5V20"/>',
+  folder: '<path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2h8.5A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/>',
+  sheet: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16M10 4v16"/>',
+  shield: '<path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/>',
+  cloud: '<path d="M7 18h10a4 4 0 0 0 .4-7.98A6 6 0 0 0 6.1 9.2 4.4 4.4 0 0 0 7 18z"/>',
+  bulb: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/>',
+  sliders: '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>',
+  route: '<circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="6" r="2.4"/><path d="M8.4 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.6"/>',
+  list: '<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>',
+  hand: '<path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V12m0-5.5a1.5 1.5 0 0 1 3 0V12m0-4a1.5 1.5 0 0 1 3 0v6.5a6 6 0 0 1-6 6h-.5a5.5 5.5 0 0 1-4.6-2.5L4 15.4a1.5 1.5 0 0 1 2.4-1.8L8 15.5"/>',
+  info: '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 7.8v.1"/>',
+  calendar: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
+  card: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10.5h18M7 15h4"/>',
+  target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".6"/>',
+  pencil: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
+  trash: '<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/>',
+  nota: '<path d="M5 5h14v10H10l-5 4z"/><path d="M9 9h6M9 12h4"/>',
+  sparkle: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/>',
+};
+export function icone(nome, cls = '') {
+  const t = document.createElement('template');
+  t.innerHTML = `<svg class="icone ${cls}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${IC[nome] || ''}</svg>`;
+  return t.content.firstChild;
+}
+
+// Preço como na etiqueta de gôndola: centavos pequenos no alto ("R$ 23,⁹⁸")
+export function precoEtq(n, { cifrao = true } = {}) {
+  if (n === null || n === undefined) return h('span', { class: 'preco-etq vazio num', 'aria-label': 'sem preço' }, cifrao ? h('span', { class: 'cifrao' }, 'R$') : null, '—');
+  const [i, c] = n2.format(n).split(',');
+  return h('span', { class: 'preco-etq num' }, cifrao ? h('span', { class: 'cifrao' }, 'R$') : null, i, h('sup', null, `,${c}`));
+}
+
 export const vibrar = (ms = 12) => { try { navigator.vibrate?.(ms); } catch { /* sem vibração */ } };

@@ -2,7 +2,7 @@
 
 *[Read in English](case-study.md)*
 
-**Papel:** produto, UX e engenharia, de ponta a ponta · **Período:** out/2026 – hoje, 14 versões · **Usuários:** quem faz as
+**Papel:** produto, UX e engenharia, de ponta a ponta · **Período:** out/2026 – hoje, 17 versões · **Usuários:** quem faz as
 compras da família, todo mês (dois celulares sincronizados)
 
 ## O problema
@@ -27,6 +27,8 @@ plano, e o histórico de preços morava em abas antigas que ninguém reabria.
 | **Ler e gerar o `.xlsx` original** | A família mantém a planilha como cópia e ponte | Uma camada ZIP/XML escrita à mão em vez de biblioteca, protegida por testes contra o arquivo real |
 | **Ler a nota a partir do texto que o usuário copia** | A página da Sefaz bloqueia acesso automático; robô seria frágil e indelicado | Um passo a mais (copiar a página) — ou uma foto colada no Claude com um pedido pronto |
 | **Regras e memória em vez de API de IA** | Sugerir categoria e ligar a nota precisam ser instantâneos, offline e grátis | Regras conservadoras: na dúvida (empate), o app pergunta |
+| **Três modelos antes do redesenho** | A família escolheu o visual "Etiqueta" entre três; cada cor ganhou um significado | Mais rodadas de desenho; o escolhido pegou a tela de ajustes de outro modelo |
+| **Ideias por um conector MCP** | O que se digita no celular chega direto ao Claude e é respondido no app — sem copiar e colar | Um endereço secreto para guardar (só o hash fica no servidor, dá para trocar pelo app) |
 | **Durable Object para sincronizar** | Um SQLite pequeno por família no plano grátis, consistência forte, nenhum banco para manter | O build de branch não sobe migração de Durable Object → só a `main` publica |
 
 ## O que saiu
@@ -34,6 +36,9 @@ plano, e o histórico de preços morava em abas antigas que ninguém reabria.
 - A pesquisa do mês acontece no corredor, com o mercado mais barato e a rota sempre à vista.
 - A nota é conferida em um minuto; os códigos de cada loja são aprendidos e a próxima nota se liga sozinha.
 - O total do mês bate com a planilha antiga, e a planilha ainda pode ser exportada a qualquer hora.
+- Os preços se leem como na gôndola: o mais barato é uma etiqueta, a compra é um gesto, e o histórico diz quanto se economizou
+  e quanto subiu o carrinho da própria família.
+- As ideias e problemas da família chegam direto ao Claude e voltam respondidos dentro do app.
 - Uma ponte na casa: a Cesta traz a lista de compras da dieta do app de alimentação (Mesa) e devolve o preço por grama, e o
   custo da semana da dieta aparece lá.
 

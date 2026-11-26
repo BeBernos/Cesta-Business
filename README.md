@@ -20,12 +20,13 @@ where each item is cheapest and the best route of stores to visit, turns into a 
 electronic receipt afterwards to check what was really charged.**
 
 It was built for the person who does the family's shopping and has been used every month since October 2026, replacing a
-spreadsheet with one tab per month. Fourteen releases later it also prices the family's diet for the nutrition app (Mesa).
+spreadsheet with one tab per month. Seventeen releases later it also prices the family's diet for the nutrition app (Mesa) and hands the family's feedback
+straight to Claude through its own connector.
 
-**At a glance:** 14 releases · used monthly since Oct 2026 · 5 stores × 147 products · 0 dependencies · works fully offline
+**At a glance:** 17 releases · used monthly since Oct 2026 · 5 stores × 147 products · 0 dependencies · works fully offline
 
-> The live demo opens with the ready-made list of 147 products and **fictitious prices** in five stores, generated in your
-> browser. It works offline; nothing leaves your browser.
+> The live demo opens with the ready-made list of 147 products and three months of **fictitious prices** in five stores,
+> generated in your browser. It works offline; nothing leaves your browser.
 
 ## What it does
 
@@ -40,7 +41,8 @@ spreadsheet with one tab per month. Fourteen releases later it also prices the f
 - **Shopping** — a checklist per store, a suggested route, a monthly budget, the shelf price with an alert when it's ≥10%
   above plan and cheaper elsewhere, shared between phones.
 - **After paying** — the NFC-e receipt linked to products, store codes learned, overcharges and missing items flagged.
-- **Spreadsheet** — imports and exports the family's original Excel format.
+- **History** — savings this month and this year, the family basket's inflation and the products whose price moved the most.
+- **Spreadsheet** — imports and exports the family's original Excel format; on a computer the price screen becomes a grid.
 
 ## How it works
 
@@ -59,6 +61,10 @@ Cloudflare Durable Object per family — that applies exactly the same merge rul
 
 **Integrations** — Through the Durable Object, Cesta pulls the diet's shopping list from the nutrition app (Mesa), converts grams and millilitres into packages by brand size, and sends back the price per gram/ml/unit so Mesa can show the diet's cost.
 
+**Claude connector** — The Worker also speaks MCP (Streamable HTTP) at a secret address: Claude reads the ideas and bug reports the family sends from the app and, once a change ships, marks them as done with a short reply that shows up on the phones at the next sync.
+
+**Design** — The "shelf tag" look was chosen by the family among three design options: every product is a supermarket price tag (cheapest price large, cents raised, price per kg below), colour always carries meaning (green = cheapest, purple = quantity, amber = where you type a price), single-stroke SVG icons, a local variable font (Archivo), and gestures in the store — swipe right to the cart, left for "not here".
+
 ### The flow
 
 <p align="center"><img src="docs/images/flow-en.png" alt="" width="100%"></p>
@@ -71,12 +77,14 @@ Cloudflare Durable Object per family — that applies exactly the same merge rul
 | **Same merge rule everywhere** | Phones and server converge with `{k, u, v}` + tombstones; no special cases. |
 | **Copied text, not scraping** | Respects the tax authority's bot protection and never breaks when the page changes its markup. |
 | **Zero dependencies** | Even the `.xlsx` reader/writer is hand-written; nothing to update, nothing to audit but our code. |
+| **A shelf tag, not a table** | The person shopping reads prices the way the store shows them; the spreadsheet grid stays available on a computer. |
 
 ## Security
 
 Sync is protected by a family password that never leaves the phone: the app sends a SHA-256 token and the server keeps only
 a hash of it. Receipt parsing discards personal identifiers (tax ID, name, membership number). Links are accepted only from
-`https://*.gov.br`. Details in [SECURITY.md](SECURITY.md).
+`https://*.gov.br`. The Claude connector lives at a random 48-character address that the server keeps only as a hash.
+Details in [SECURITY.md](SECURITY.md).
 
 ## Engineering highlights
 
@@ -85,13 +93,13 @@ a hash of it. Receipt parsing discards personal identifiers (tax ID, name, membe
 - **Receipt reader** tested against a real (anonymised) NFC-e, including codes, quantities, discounts and store mapping.
 - **Learning without AI** — product/receipt linking and category suggestions learn from what the family does, with rules
   that never guess when there's a tie.
-- **44 model tests** plus a Playwright end-to-end run of the whole app: two phones, offline mode, receipts, the spreadsheet,
+- **46 model and connector tests** plus a Playwright end-to-end run of the whole app: two phones, offline mode, receipts, the spreadsheet,
   and the integration with the nutrition app with both Workers running locally.
 
 ## Tech stack
 
 JavaScript (ES2023, no framework) · IndexedDB · Service Worker · CompressionStream (.xlsx) · Cloudflare Workers · Durable
-Objects (SQLite) · Service bindings · Claude (copy & paste prompts) · Node.js test runner · Playwright
+Objects (SQLite) · Service bindings · MCP (Streamable HTTP) · Claude (connector and copy & paste prompts) · Node.js test runner · Playwright
 
 ## Read more
 

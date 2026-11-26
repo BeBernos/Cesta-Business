@@ -752,6 +752,60 @@ export class Loja {
     return { ideal, usados, itens: itens.length, opcoes: melhores };
   }
 
+  // ---------- resumo e história (1.13) ----------
+  // Quanto a lista economiza comprando cada item no mais barato, contra a média dos outros mercados com preço
+  economia(lista) {
+    let e = 0;
+    for (const p of this.produtos(lista)) {
+      if (!p.qtd) continue;
+      const c = this.calcProduto(lista, p.id);
+      const outros = c.linhas.filter((l) => l.preco !== null && l.aceita && !c.baratos.has(l.mid));
+      if (c.menor === null || !outros.length) continue;
+      e += (outros.reduce((s, l) => s + l.preco, 0) / outros.length - c.menor) * p.qtd;
+    }
+    return Math.round(e * 100) / 100;
+  }
+
+  economiaMes(mes) { return Math.round(this.listas(mes).reduce((s, l) => s + this.economia(l), 0) * 100) / 100; }
+
+  // Menor preço de cada produto do mês (para comparar meses)
+  _menores(mes) {
+    const m = new Map();
+    for (const p of this.produtos(mes)) { const v = this.calcProduto(mes, p.id).menor; if (v !== null) m.set(p.id, v); }
+    return m;
+  }
+
+  // Quanto o menor preço de cada produto mudou de um mês para o outro (%), do que mais subiu ao que mais baixou
+  variacoes(de, ate) {
+    const a = this._menores(de), b = this._menores(ate);
+    return [...b].filter(([pid]) => a.has(pid)).map(([pid, v]) => ({ p: this.produto(ate, pid), pct: Math.round((v / a.get(pid) - 1) * 1000) / 10 }))
+      .sort((x, y) => y.pct - x.pct);
+  }
+
+  // Inflação do carrinho da família: os mesmos produtos nos dois meses, pesados pela quantidade de agora (1 se não tem)
+  inflacao(de, ate) {
+    const a = this._menores(de), b = this._menores(ate);
+    let va = 0, vb = 0, n = 0;
+    for (const [pid, v] of b) {
+      if (!a.has(pid)) continue;
+      const w = this.produto(ate, pid)?.qtd || 1;
+      va += a.get(pid) * w; vb += v * w; n++;
+    }
+    return n ? { pct: Math.round((vb / va - 1) * 1000) / 10, n } : null;
+  }
+
+  // Avisos do topo da lista: o que subiu desde o mês passado, o que está sem preço e se dá para ir a menos mercados
+  alertas(lista) {
+    const mes = mesDe(lista);
+    const ant = this.meses().filter((m) => m < mes).pop();
+    const naLista = new Set(this.produtos(lista).filter((p) => p.qtd).map((p) => p.id));
+    const subiu = ant ? this.variacoes(ant, mes).filter((x) => naLista.has(x.p.id) && x.pct >= 8) : [];
+    const semPreco = [...naLista].filter((pid) => this.calcProduto(lista, pid).menor === null).length;
+    const r = this.sugerirRota(lista);
+    const rota = r?.opcoes.find((o) => o.ids.length < r.usados && o.extra <= Math.max(3, r.ideal * 0.01)) || null;
+    return { subiu, semPreco, rota };
+  }
+
   // ---------- operações ----------
   iniciarPadrao(mes = mesDeData(), produtos = []) {
     return this.lote(() => {

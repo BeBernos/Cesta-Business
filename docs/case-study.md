@@ -2,7 +2,7 @@
 
 *[Leia em português](case-study.pt-BR.md)*
 
-**Role:** product, UX and engineering, end to end · **Period:** Oct 2026 – today, 14 releases · **Users:** the person who
+**Role:** product, UX and engineering, end to end · **Period:** Oct 2026 – today, 17 releases · **Users:** the person who
 does the family's shopping, every month (two phones in sync)
 
 ## The problem
@@ -27,6 +27,8 @@ against the plan, and price history lived in old tabs nobody reopened.
 | **Read and write the original `.xlsx`** | The family keeps the spreadsheet as a backup and a bridge | A hand-written ZIP/XML layer instead of a library, guarded by tests against the real file |
 | **Read the receipt from text the user copies** | The tax authority's page blocks automated access; scraping would be fragile and impolite | One extra step for the user (copy the page) — or a photo pasted into Claude with a ready prompt |
 | **Rules and memory instead of an AI API** | Category suggestions and receipt linking must be instant, offline and free | Rules are conservative: when in doubt (a tie), the app asks |
+| **Three design options before the redesign** | The family picked the "shelf tag" look among three; every colour got one meaning | Extra design rounds; the winner borrowed the settings screen from another option |
+| **Feedback through an MCP connector** | Ideas typed on the phone reach Claude directly and get answered in the app — no copy & paste | A secret URL to keep (stored only as a hash, rotatable from the app) |
 | **Durable Object for sync** | One small SQLite per family on the free plan, strong consistency, no database to manage | A Worker build can't upload Durable Object migrations from branches → only `main` deploys |
 
 ## What came out
@@ -34,6 +36,9 @@ against the plan, and price history lived in old tabs nobody reopened.
 - The month's research happens in the aisle, with the cheapest store and the route always visible.
 - Receipts are audited in a minute; the store's codes are learned so the next one links by itself.
 - The month's total matches the old spreadsheet, and the spreadsheet can still be exported at any time.
+- Prices read like the shelf: the cheapest price is a tag, the store is a swipe, and the month's history says how much was saved
+  and how much the family's own basket went up.
+- The family's ideas and bug reports go straight to Claude and come back answered inside the app.
 - A household bridge: Cesta pulls the shopping list of the family's diet from the nutrition app (Mesa) and sends back the
   price per gram, so the diet's weekly cost shows up there.
 

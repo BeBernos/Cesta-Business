@@ -5,8 +5,12 @@
 //   Ao trazer a lista da dieta, a Cesta devolve lá o preço por g/ml/un dos itens ligados (custo da dieta na Mesa).
 // - Os dados ficam num Durable Object "Dados" (SQLite, plano grátis), um único para a família.
 //
+// - /api/mcp/<token>: conector do Claude (worker/conector.js) — lê as ideias e problemas da família (fb:) e responde.
+//
 // Senha da família: o primeiro celular que liga a sincronização cria a senha. O servidor guarda só
 // um hash dela (o app já envia um hash, então a senha em si nunca sai do celular).
+
+import { responder } from './conector.js';
 
 const json = (dados, status = 200) => new Response(JSON.stringify(dados), {
   status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
@@ -46,9 +50,37 @@ export class Dados {
     return !!(token && hash && (await sha256(token)) === hash);
   }
 
+  // grava um registro como se viesse de um celular (os aparelhos recebem na próxima sincronização)
+  gravar(k, v) {
+    const atual = this.sql.exec('SELECT u FROM recs WHERE k = ?', k).toArray()[0];
+    const seq = Number(this.meta('seq') || 0) + 1;
+    this.sql.exec('INSERT OR REPLACE INTO recs (k, u, s, v) VALUES (?, ?, ?, ?)', k, Math.max(Date.now(), (atual?.u ?? 0) + 1), seq, JSON.stringify(v));
+    this.setMeta('seq', seq);
+  }
+
   async fetch(req) {
     const caminho = new URL(req.url).pathname.replace(/^\/api\//, '');
     try {
+      if (caminho === 'mcp/token') {
+        // GET: o conector está ligado? POST {}: gera o endereço (o anterior para de funcionar). POST {desligar}: desliga.
+        if (!(await this.autorizado(req))) return json({ erro: 'Senha da família incorreta.' }, 401);
+        if (req.method === 'GET') return json({ ligado: !!this.meta('mcp') });
+        const { desligar } = await req.json().catch(() => ({}));
+        if (desligar) { this.sql.exec("DELETE FROM meta WHERE chave = 'mcp'"); return json({ ligado: false }); }
+        const token = [...crypto.getRandomValues(new Uint8Array(24))].map((b) => b.toString(16).padStart(2, '0')).join('');
+        this.setMeta('mcp', await sha256(token));
+        return json({ ligado: true, url: `${new URL(req.url).origin}/api/mcp/${token}` });
+      }
+      const mcp = /^mcp\/([0-9a-f]{48})$/.exec(caminho);
+      if (mcp) {
+        const hash = this.meta('mcp');
+        if (!hash || (await sha256(mcp[1])) !== hash) return new Response('Não encontrado', { status: 404 });
+        return responder(req, {
+          feedbacks: () => this.sql.exec("SELECT k, v FROM recs WHERE k LIKE 'fb:%'").toArray()
+            .map((l) => ({ id: l.k.slice(3), v: JSON.parse(l.v) })).filter((f) => f.v),
+          gravar: (k, v) => this.gravar(k, v),
+        });
+      }
       if (caminho === 'estado') {
         const n = this.sql.exec('SELECT COUNT(*) AS n FROM recs').one().n;
         return json({ configurado: !!this.meta('senha'), registros: n });

@@ -1,7 +1,7 @@
 // Modo compra: a lista separada por mercado (onde cada item sai mais barato), com caixinhas para marcar.
 
 import { app } from './ctx.js';
-import { h, fmtRS, fmtN, fmtQ, folha, confirmar, toast, vibrar, campoMoeda } from './ui.js';
+import { h, fmtRS, fmtN, fmtQ, folha, confirmar, toast, vibrar, campoMoeda, icone, precoEtq } from './ui.js';
 import { botaoMes } from './lista.js';
 import { lerNumero, lerExpr, norm } from './modelo.js';
 import { cartoes as cartoesOrcamento } from './orcamento.js';
@@ -9,6 +9,7 @@ import { blocoNotas } from './notas.js';
 
 let telaLigada = null;
 let buscaCompra = '';
+let abrirOpcoes = false;
 const recolhidos = new Set();
 
 async function manterTela(ligar) {
@@ -30,43 +31,46 @@ export function telaCompra(topo, tela) {
   const esconder = !!app.prefs.esconderFeitos;
 
   const pct = lc.itens ? Math.round((lc.feitos / lc.itens) * 100) : 0;
-  const resumo = h('div', { class: 'resumo-compra' },
-    h('div', { class: 'rot' }, `${lc.grupos.some((g) => g.itens.some((i) => i.pago)) ? 'Total (gôndola + pesquisado)' : 'Total estimado'} · ${loja.nomeLista(mes)}`),
-    h('div', { class: 'val num' }, fmtRS(lc.total)),
+  const o = loja.orcamento(mes);
+  const resumo = h('section', { class: 'resumo-compra' },
+    h('div', { class: 'rot trilho' }, `${lc.grupos.some((g) => g.itens.some((i) => i.pago)) ? 'Gôndola + pesquisado' : 'Total estimado'} · ${loja.nomeLista(mes)}`),
+    h('div', { class: 'val' }, precoEtq(lc.total),
+      o.estado !== 'sem' ? h('span', { class: `de-valor num ${o.estado}` }, o.estado === 'passou' ? `passou ${fmtRS(-o.sobra)}` : `de ${fmtRS(o.valor)}`) : null),
     h('div', { class: 'lin' }, h('div', { class: 'barra' }, h('i', { style: { width: `${pct}%` } })),
       h('span', { class: 'num' }, `${lc.feitos} de ${lc.itens} no carrinho`)),
-    lc.itens ? linhaOrcado(lc) : null,
+    lc.itens ? h('div', { class: 'etq-base' }, linhaOrcado(lc), linhaValor(o)) : null);
+  // Rota e opções: ficam recolhidas para a lista aparecer logo na primeira tela
+  const opcoes = h('details', { class: 'opcoes-compra' },
+    h('summary', null, icone('sliders'), h('span', null, `Rota e opções · ${lc.todos.length - lc.fora.size} de ${lc.todos.length} mercados`), icone('chevD', 'tri')),
     h('div', { class: 'vou' },
       h('span', { class: 'rot', style: { width: '100%' } }, 'Mercados que vou visitar (toque para tirar da rota):'),
       lc.todos.map((m) => h('button', {
         class: 'chip', 'aria-pressed': String(!lc.fora.has(m.id)),
         onclick: () => { loja.setForaCompra(mes, m.id, !lc.fora.has(m.id)); app.render(); },
-      }, lc.fora.has(m.id) ? `✕ ${m.nome}` : `✓ ${m.nome}`))),
+      }, icone(lc.fora.has(m.id) ? 'x' : 'check'), m.nome))),
     h('div', { class: 'vou' },
       'wakeLock' in navigator ? h('button', {
         class: 'chip', 'aria-pressed': String(!!app.prefs.telaLigada),
         onclick: () => { app.prefs.telaLigada = !app.prefs.telaLigada; app.salvarPrefs(); manterTela(app.prefs.telaLigada); app.render(); },
-      }, app.prefs.telaLigada ? '🔆 Tela sempre ligada' : '🔅 Manter tela ligada') : null,
+      }, icone('bulb'), app.prefs.telaLigada ? 'Tela sempre ligada' : 'Manter tela ligada') : null,
       h('button', { class: 'chip', 'aria-pressed': String(!!app.prefs.perguntarCaixa), onclick: () => { app.prefs.perguntarCaixa = !app.prefs.perguntarCaixa; app.salvarPrefs(); app.render(); } },
-        app.prefs.perguntarCaixa ? '🏷️ Perguntando o preço da gôndola ao marcar' : '🏷️ Perguntar o preço da gôndola ao marcar'),
+        icone('tag'), app.prefs.perguntarCaixa ? 'Perguntando o preço da gôndola ao marcar' : 'Perguntar o preço da gôndola ao marcar'),
       h('button', { class: 'chip', 'aria-pressed': String(esconder), onclick: () => { app.prefs.esconderFeitos = !esconder; app.salvarPrefs(); app.render(); } },
-        esconder ? '🙈 Escondendo o que já peguei' : '👁 Mostrando tudo')));
-  tela.append(h('h1', { class: 'titulo-tela' }, '🛒 Modo compra'), resumo);
-  if (lc.itens) tela.append(cartoesOrcamento(mes, { compra: true }));
+        icone('check'), esconder ? 'Escondendo o que já peguei' : 'Mostrando tudo')),
+    o.estado !== 'sem' ? cartoesOrcamento(mes, { compra: true }) : null);
+  if (abrirOpcoes) opcoes.open = true;
+  opcoes.addEventListener('toggle', () => { abrirOpcoes = opcoes.open; });
+  tela.append(resumo, opcoes);
 
   if (!lc.itens) {
-    tela.append(h('div', { class: 'vazio-lista' }, h('div', { class: 'grande' }, '🧺'),
+    tela.append(h('div', { class: 'vazio-lista' }, h('div', { class: 'grande' }, icone('cart')),
       h('p', null, 'A lista de compras é feita com os produtos que têm quantidade.'),
-      h('p', null, 'Na aba Preços, toque no ＋ roxo dos itens que você vai comprar.'),
+      h('p', null, 'Na aba Preços, toque no botão roxo dos itens que você vai comprar.'),
       h('button', { class: 'btn prim', onclick: () => app.irAba('precos') }, 'Ir para Preços')));
     return;
   }
 
-  const resumoTexto = lc.grupos.filter((g) => g.itens.length).map((g) => `No ${g.mercado.nome}: ${g.itens.length} ${g.itens.length === 1 ? 'item' : 'itens'}`).join('. ');
-  const rota = cartaoRota();
-  if (rota) tela.append(rota);
-  if (resumoTexto) tela.append(h('p', { class: 'sub', style: { color: 'var(--suave)', margin: '0 4px 4px' } }, `${resumoTexto}.`));
-  tela.append(h('p', { class: 'sub', style: { color: 'var(--suave)', margin: '0 4px 12px', fontSize: '.86rem' } }, 'Toque no preço de um item para anotar o da gôndola. Em ⋯: não achei aqui, trocar de mercado ou tirar da lista.'));
+  tela.append(h('p', { class: 'dica-gesto' }, icone('hand'), h('span', null, 'Deslize para a direita: no carrinho. Para a esquerda: não achei. Toque no preço para anotar o da gôndola.')));
 
   // Busca: esconde o que não bate, sem redesenhar a tela (o teclado continua aberto)
   const semAchar = h('p', { class: 'sub', hidden: true, style: { color: 'var(--suave)', textAlign: 'center' } }, 'Nenhum item da lista com esse nome.');
@@ -78,7 +82,7 @@ export function telaCompra(topo, tela) {
       let visiveis = 0, sep = null, noSep = 0;
       for (const el of gr.querySelectorAll('.grupo-itens > *')) {
         if (el.classList.contains('sep-cat')) { if (sep) sep.hidden = !noSep; sep = el; noSep = 0; continue; }
-        if (!el.classList.contains('ic-compra')) continue;
+        if (!el.classList.contains('ic-deslize')) continue;
         const ok = !t || norm(el.dataset.nome).includes(t);
         el.hidden = !ok;
         if (ok) { visiveis++; noSep++; }
@@ -90,7 +94,7 @@ export function telaCompra(topo, tela) {
     }
     semAchar.hidden = !t || algum;
   };
-  const busca = h('div', { class: 'busca busca-compra' }, h('span', { class: 'lupa' }, '🔎'),
+  const busca = h('div', { class: 'busca busca-compra' }, h('span', { class: 'lupa' }, icone('search')),
     h('input', { type: 'search', placeholder: 'Achar item na lista…', value: buscaCompra, 'aria-label': 'Achar item na lista', oninput: (e) => filtrar(e.target.value) }));
   tela.append(busca, semAchar);
   for (const g of lc.grupos) {
@@ -101,15 +105,17 @@ export function telaCompra(topo, tela) {
     tela.append(grupo('_sem', 'Sem preço pesquisado', `${lc.semPreco.length} ${lc.semPreco.length === 1 ? 'item' : 'itens'} — compre onde achar melhor`, '', lc.semPreco, esconder));
   }
   if (buscaCompra) filtrar(buscaCompra);
+  const rota = cartaoRota();
+  if (rota) tela.append(rota);
   tela.append(h('div', { class: 'grade2', style: { margin: '6px 0 20px' } },
-    h('button', { class: 'btn', onclick: () => compartilhar(lc) }, '📤 Enviar lista'),
+    h('button', { class: 'btn', onclick: () => compartilhar(lc) }, icone('share'), 'Enviar lista'),
     h('button', { class: 'btn', onclick: async () => {
       if (!lc.feitos && !lc.grupos.concat({ itens: lc.semPreco }).some((g) => g.itens.some((i) => i.faltou.length))) return;
       if (await confirmar('Desmarcar tudo?', 'Todos os itens voltam para a lista, como se a compra fosse começar agora (os “não achei” também são esquecidos).', 'Desmarcar tudo')) {
         const desfazer = loja.limparCompra(mes); app.render();
         toast('Itens desmarcados.', { acao: { rotulo: 'Desfazer', fn: () => { desfazer(); app.render(); } } });
       }
-    } }, '↺ Desmarcar tudo')),
+    } }, icone('x'), 'Desmarcar tudo')),
     blocoNotas({ titulo: false }));
 }
 
@@ -117,18 +123,25 @@ export function telaCompra(topo, tela) {
 function linhaOrcado(lc) {
   const { loja, mes } = app;
   const oc = loja.orcado(mes);
-  if (!oc) return h('div', { class: 'orcado' }, '📌 O orçado fica guardado quando você marcar o primeiro item (ou anotar um preço da gôndola).');
+  if (!oc) return h('div', { class: 'orcado' }, 'O orçado é guardado quando você marcar o primeiro item.');
   const quando = new Date(oc.quando).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   const fim = lc.feitos === lc.itens;
   const atual = lc.total;
   const dif = Math.round((atual - oc.total) * 100) / 100;
   return h('div', { class: `orcado${dif > 0.004 ? ' mais' : dif < -0.004 ? ' menos' : ''}` },
-    h('span', { class: 'num' }, fim ? '✅ Compra feita: ' : '📌 ', `orçado ${fmtRS(oc.total)} (${quando}) · ${fim ? 'gasto' : 'agora'} ${fmtRS(atual)}`,
+    h('span', { class: 'num' }, fim ? 'Compra feita: ' : '', `orçado ${fmtRS(oc.total)} (${quando}) · ${fim ? 'gasto' : 'agora'} ${fmtRS(atual)}`,
       Math.abs(dif) > 0.004 ? ` (${dif > 0 ? '+' : '−'}${fmtRS(Math.abs(dif))})` : ' (igual)'),
     h('button', { class: 'btn pequeno fantasma', onclick: async () => {
       if (!(await confirmar('Atualizar o orçado?', 'O orçado passa a ser a lista de agora, com os preços e as quantidades de agora.', 'Atualizar'))) return;
-      loja.congelarOrcado(mes, { forcar: true }); app.render(); toast('📌 Orçado atualizado.');
+      loja.congelarOrcado(mes, { forcar: true }); app.render(); toast('Orçado atualizado.');
     } }, 'Atualizar'));
+}
+
+// Valor do mês na base da etiqueta (sem verde: verde é só "mais barato")
+function linhaValor(o) {
+  if (o.estado === 'sem') return h('button', { class: 'link-base', onclick: () => app.abrirTotais() }, icone('card'), 'Definir o valor do mês');
+  return h('div', { class: `orc-linha ${o.estado}` }, h('span', { class: 'num' }, o.estado === 'passou' ? `Passou ${fmtRS(-o.sobra)} do valor` : `Sobram ${fmtRS(o.sobra)} do valor`),
+    o.semPreco ? h('small', null, `${o.semPreco} sem preço fora da conta`) : null);
 }
 
 // Rota sugerida: em poucos mercados pagando quase o mesmo (para economizar viagem)
@@ -139,18 +152,26 @@ function cartaoRota() {
   const fora = loja.listaCompra(mes).fora;
   const rotaAtual = (o) => loja.mercados().every((m) => o.ids.includes(m.id) !== fora.has(m.id));
   return h('section', { class: 'rota' },
-    h('h3', null, '🗺️ Rota sugerida'),
+    h('h3', null, icone('route'), 'Rota sugerida'),
     h('p', { class: 'sub' }, `Comprando tudo no mais barato você passa em ${r.usados} mercados e paga ${fmtRS(r.ideal)}. Com menos paradas:`),
     r.opcoes.map((o) => h('div', { class: 'rota-op' },
       h('div', { class: 'tx' }, h('b', null, o.mercados.map((m) => m.nome).join(' + ')),
         h('small', { class: 'num' }, `${fmtRS(o.total)} · `, h('span', { class: `extra${o.extra <= 0.005 ? ' zero' : ''}` }, o.extra <= 0.005 ? 'mesmo valor' : `+${fmtRS(o.extra)}`))),
-      rotaAtual(o) ? h('span', { class: 'dir' }, '✓ em uso') :
+      rotaAtual(o) ? h('span', { class: 'dir' }, icone('check'), 'em uso') :
         h('button', { class: 'btn pequeno', onclick: () => {
           const desfazer = loja.lote(() => { for (const m of loja.mercados()) loja.setForaCompra(mes, m.id, !o.ids.includes(m.id)); });
           app.render();
           toast(`Rota: ${o.mercados.map((m) => m.nome).join(' + ')}.`, { acao: { rotulo: 'Desfazer', fn: () => { desfazer(); app.render(); } } });
         } }, 'Usar'))),
     r.itens < loja.listaCompra(mes).itens ? h('p', { class: 'sub' }, 'Itens sem preço pesquisado não entram nessa conta.') : null);
+}
+
+// Anel de progresso: quantos itens deste mercado já estão no carrinho
+function anel(feitos, total) {
+  const r = 16, c = 2 * Math.PI * r;
+  const t = document.createElement('template');
+  t.innerHTML = `<svg class="anel" viewBox="0 0 40 40" role="img" aria-label="${feitos} de ${total} no carrinho"><circle class="fundo" cx="20" cy="20" r="${r}"/><circle class="frente" cx="20" cy="20" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - (total ? feitos / total : 0))}"/><text x="20" y="20">${feitos}/${total}</text></svg>`;
+  return t.content.firstChild;
 }
 
 function grupo(id, titulo, sub, valor, itens, esconder) {
@@ -160,7 +181,7 @@ function grupo(id, titulo, sub, valor, itens, esconder) {
     const r = el.classList.toggle('recolhida');
     if (r) recolhidos.add(id); else recolhidos.delete(id);
     cab.setAttribute('aria-expanded', String(!r));
-  } }, h('span', { class: 'tit' }, h('b', null, titulo), h('small', null, sub)), h('span', { class: 'val num' }, valor), h('span', null, recolhido ? '▸' : '▾'));
+  } }, anel(itens.filter((i) => i.ok).length, itens.length), h('span', { class: 'tit' }, h('b', null, titulo), h('small', null, sub)), h('span', { class: 'val num' }, valor), icone('chevD', 'tri'));
   const lista = h('div', { class: 'grupo-itens' });
   let catAtual = null;
   const visiveis = itens.filter((it) => !(esconder && it.ok));
@@ -169,7 +190,7 @@ function grupo(id, titulo, sub, valor, itens, esconder) {
     if (nomeCat !== catAtual) { catAtual = nomeCat; lista.append(h('div', { class: 'sep-cat' }, nomeCat)); }
     lista.append(itemCompra(it));
   }
-  if (!visiveis.length) lista.append(h('p', { style: { color: 'var(--suave)', padding: '12px 8px', margin: 0 } }, '✓ Tudo deste mercado já está no carrinho!'));
+  if (!visiveis.length) lista.append(h('p', { style: { color: 'var(--suave)', padding: '12px 8px', margin: 0 } }, 'Tudo deste mercado já está no carrinho.'));
   el.append(cab, lista);
   return el;
 }
@@ -188,18 +209,71 @@ function itemCompra(it) {
   const dif = real && !it.semEst ? Math.round((it.total - it.totalEst) * 100) / 100 : 0;
   const refUnit = real && !it.semEst ? it.totalEst / it.p.qtd : null;
   const txtOrcado = refUnit === null ? '' : ` · orçado ${fmtRS(refUnit)}${dif ? ` (${dif > 0 ? '+' : '−'}${fmtRS(Math.abs(dif))})` : ' (igual)'}`;
-  return h('div', { class: `ic-compra${it.ok ? ' ok' : ''}`, dataset: { nome: `${it.p.nome} ${it.marca || ''}` } },
-    h('button', { class: 'marca-cx', role: 'checkbox', 'aria-checked': String(it.ok), 'aria-label': it.p.nome, onclick: alternar }, '✓'),
+  const frente = h('div', { class: `ic-compra${it.ok ? ' ok' : ''}` },
+    h('button', { class: 'marca-cx', role: 'checkbox', 'aria-checked': String(it.ok), 'aria-label': it.p.nome, onclick: alternar }, icone('check')),
     h('button', { class: 'tx', onclick: alternar },
       h('b', null, it.p.nome), h('small', null, detalhe),
       real ? h('div', { class: `gondola ${dif > 0 ? 'mais' : dif < 0 ? 'menos' : ''}` },
-        it.nota ? `🧾 nota ${fmtRS(it.nota.preco)}${it.pago ? ` · gôndola ${fmtRS(it.pago.preco)}` : ''}${txtOrcado}` : `🏷️ gôndola ${fmtRS(it.pago.preco)}${txtOrcado}`) : null,
-      it.faltou.length ? h('div', { class: 'manual' }, `😕 não achou no ${it.faltou.join(', ')}`) : null,
-      it.manual ? h('div', { class: 'manual' }, '✋ mercado escolhido por você') : null),
-    h('button', { class: `vl num${it.pago ? ' tem' : ''}`, 'aria-label': `Preço da gôndola de ${it.p.nome}`, onclick: () => gondola(it) }, it.total != null ? fmtRS(it.total) : '＋ R$'),
+        it.nota ? `nota ${fmtRS(it.nota.preco)}${it.pago ? ` · gôndola ${fmtRS(it.pago.preco)}` : ''}${txtOrcado}` : `gôndola ${fmtRS(it.pago.preco)}${txtOrcado}`) : null,
+      it.faltou.length ? h('div', { class: 'manual' }, `não achou no ${it.faltou.join(', ')}`) : null,
+      it.manual ? h('div', { class: 'manual' }, 'mercado escolhido por você') : null),
+    h('button', { class: `vl num${it.pago ? ' tem' : ''}`, 'aria-label': `Preço da gôndola de ${it.p.nome}`, onclick: () => gondola(it) }, it.total != null ? precoEtq(it.total, { cifrao: false }) : '＋ R$'),
     it.ok
-      ? h('button', { class: `btn-ic${it.pago ? ' tem' : ''}`, 'aria-label': `Gôndola de ${it.p.nome}`, onclick: () => gondola(it) }, '🏷️')
+      ? h('button', { class: `btn-ic${it.pago ? ' tem' : ''}`, 'aria-label': `Gôndola de ${it.p.nome}`, onclick: () => gondola(it) }, icone('tag'))
       : h('button', { class: 'btn-ic', 'aria-label': `Opções de ${it.p.nome}`, onclick: () => trocarMercado(it) }, '⋯'));
+  const el = h('div', { class: 'ic-deslize', dataset: { nome: `${it.p.nome} ${it.marca || ''}` } },
+    h('div', { class: 'fundo-deslize', 'aria-hidden': 'true' },
+      h('span', { class: 'f-ok' }, icone('check'), it.ok ? 'Tirar do carrinho' : 'No carrinho'),
+      it.mid ? h('span', { class: 'f-nao' }, 'Não achei', icone('x')) : h('span')),
+    frente);
+  deslizar(el, frente, {
+    direita: () => { vibrar(18); loja.marcarCompra(mes, it.p.id, !it.ok); app.render(); },
+    esquerda: it.mid ? () => {
+      vibrar(18);
+      const desfazer = loja.lote(() => loja.naoAchei(mes, it.p.id, it.mid));
+      app.render();
+      const novo = loja.listaCompra(mes).grupos.find((g) => g.itens.some((x) => x.p.id === it.p.id));
+      toast(novo ? `${it.p.nome} foi para o ${novo.mercado.nome}.` : `${it.p.nome}: nenhum outro mercado da rota tem preço.`,
+        { acao: { rotulo: 'Desfazer', fn: () => { desfazer(); app.render(); } } });
+    } : null,
+  });
+  return el;
+}
+
+// Deslizar o item: para a direita põe (ou tira) do carrinho; para a esquerda, "não achei".
+// Só vale arrasto na horizontal (rolar a tela continua normal); o toque simples continua funcionando.
+function deslizar(el, frente, { direita, esquerda }) {
+  const LIMITE = 72;
+  let x0 = null, y0 = 0, dx = 0, arrastando = false, id = null;
+  el.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    x0 = e.clientX; y0 = e.clientY; dx = 0; arrastando = false; id = e.pointerId;
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (x0 === null || e.pointerId !== id) return;
+    const mx = e.clientX - x0, my = e.clientY - y0;
+    if (!arrastando) {
+      if (Math.abs(my) > 10 && Math.abs(my) > Math.abs(mx)) { x0 = null; return; } // é rolagem
+      if (Math.abs(mx) < 10) return;
+      arrastando = true; el.classList.add('arrasta'); el.setPointerCapture(id);
+    }
+    dx = Math.max(esquerda ? -120 : 0, Math.min(120, mx));
+    frente.style.transform = `translateX(${dx}px)`;
+    el.classList.toggle('pronto-dir', dx > LIMITE);
+    el.classList.toggle('pronto-esq', dx < -LIMITE);
+  });
+  const soltar = () => {
+    if (x0 === null) return;
+    x0 = null;
+    if (!arrastando) return;
+    el.classList.remove('arrasta', 'pronto-dir', 'pronto-esq');
+    frente.style.transform = '';
+    if (dx > LIMITE) direita(); else if (dx < -LIMITE && esquerda) esquerda();
+  };
+  el.addEventListener('pointerup', soltar);
+  el.addEventListener('pointercancel', soltar);
+  // depois de arrastar, o "clique" que o navegador manda não pode marcar o item de novo
+  el.addEventListener('click', (e) => { if (arrastando) { e.stopPropagation(); e.preventDefault(); arrastando = false; } }, true);
 }
 
 // Preço e quantidade da gôndola: anotar (com aviso se subiu muito) e, se quiser, já pôr no carrinho

@@ -5,7 +5,7 @@ import { app } from './ctx.js';
 import { Loja, nomeMes, mesDeData } from './modelo.js';
 import { banco } from './banco.js';
 import { criarSinc } from './sinc.js';
-import { h, fmtRS, folha, toast, fecharTodas } from './ui.js';
+import { h, fmtRS, folha, toast, fecharTodas, icone } from './ui.js';
 import { telaPrecos, pintarLista, repintarCards, novoProduto, vistaGrade } from './lista.js';
 import { telaCompra } from './compra.js';
 import { telaHistorico, abrirHistorico } from './historico.js';
@@ -18,7 +18,7 @@ import { abrirOtimizar } from './assistente.js';
 import { DEMO, prepararDemo, seloDemo } from './demo.js';
 import { cartoes as cartoesOrcamento, barra as barraOrcamento, frase as fraseOrcamento, abrirValor } from './orcamento.js';
 
-app.versao = '1.12.0';
+app.versao = '1.14.1';
 
 // ---------- preferências deste celular ----------
 function lerPrefs() { try { return JSON.parse(localStorage.getItem('cesta.prefs')) || {}; } catch { return {}; } }
@@ -127,10 +127,10 @@ addEventListener('folha-fechada', () => setTimeout(() => {
 }, 50));
 
 const ABAS = [
-  ['precos', '🏷️', 'Preços'],
-  ['compra', '🛒', 'Compra'],
-  ['historico', '📈', 'Histórico'],
-  ['mais', '⚙️', 'Mais'],
+  ['precos', 'tag', 'Preços'],
+  ['compra', 'cart', 'Compra'],
+  ['historico', 'chart', 'Histórico'],
+  ['mais', 'grid', 'Mais'],
 ];
 
 let raiz, topo, tela, rodape;
@@ -165,7 +165,7 @@ function pintarRodape() {
   const naLista = app.aba === 'precos';
   const nav = h('nav', { id: 'abas' }, ABAS.map(([id, ic, rot]) => h('button', {
     'aria-current': app.aba === id ? 'page' : null, onclick: () => app.irAba(id),
-  }, h('span', { class: 'ic' }, ic), rot)));
+  }, h('span', { class: 'ic' }, icone(ic)), rot)));
   const filhos = [];
   if (naLista) {
     const c = loja.calcMes(app.mes);
@@ -174,13 +174,13 @@ function pintarRodape() {
     // Com mercados fora da rota ou itens "não achei", o total da compra difere do menor preço geral
     const comRota = Math.abs(o.planejado - c.totalGeral) > 0.005;
     filhos.push(
-      h('button', { id: 'fab', 'aria-label': 'Incluir produto', onclick: () => novoProduto() }, '＋'),
+      h('button', { id: 'fab', 'aria-label': 'Incluir produto', onclick: () => novoProduto() }, icone('plus')),
       h('button', { class: `faixa-total orc-${o.estado}`, onclick: abrirTotais },
         o.estado !== 'sem' ? barraOrcamento(o) : null,
         h('div', null, h('div', { class: 'rot' }, comRota ? 'TOTAL DA COMPRA · sua rota' : 'TOTAL GERAL · no menor preço'),
           h('div', { class: 'val num' }, fmtRS(comRota ? o.planejado : c.totalGeral))),
         o.estado === 'sem'
-          ? h('div', { class: 'mais' }, `${c.comQtd} ${c.comQtd === 1 ? 'item' : 'itens'} p/ comprar`, h('br'), h('span', { class: 'definir' }, '💳 Definir valor do mês'))
+          ? h('div', { class: 'mais' }, `${c.comQtd} ${c.comQtd === 1 ? 'item' : 'itens'} p/ comprar`, h('br'), h('span', { class: 'definir' }, icone('card'), 'Definir valor do mês'))
           : h('div', { class: 'mais' }, h('b', { class: 'orc-frase num' }, fraseOrcamento(o)), h('br'), `de ${fmtRS(o.valor)} · ${c.comQtd} itens ▴`)));
   }
   rodape.replaceChildren(h('div', { class: 'rodape-in', style: { position: 'relative' } }, filhos, nav));
@@ -197,6 +197,7 @@ function avisarSePassou(o) {
   else if (antes === 'passou') toast(`✅ Voltou a caber no valor do mês. Sobram ${fmtRS(o.sobra)}.`);
 }
 
+app.abrirTotais = () => abrirTotais();
 function abrirTotais() {
   const c = loja.calcMes(app.mes);
   const melhores = c.mercados.map((m) => ({ m, ...c.sub.get(m.id) })).sort((a, b) => b.itens - a.itens || a.total - b.total);

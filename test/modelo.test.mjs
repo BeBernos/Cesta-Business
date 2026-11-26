@@ -962,3 +962,31 @@ test('preço da dieta por g/ml/un (para o app da dieta calcular o custo da seman
   assert.equal(l.precoDaDieta(mes, ba.id, 'un'), 4, 'sem tamanho: 1 por embalagem');
   assert.equal(l.precoDaDieta(mes, ba.id, 'g'), null, 'sem tamanho e em gramas: não dá para saber');
 });
+
+test('resumo e história: economia, inflação do carrinho, o que mais mudou e alertas', () => {
+  const l = nova();
+  const [at, as, sam] = l.mercados();
+  const p = (nome, mes = '2026-10') => produto(l, mes, nome);
+  l.criarMes('2026-11', { de: '2026-10', copiarQtd: true });
+  const cafe = p('Chá');
+  const arroz = p('Arroz');
+  // outubro: arroz 20/22/24 (qtd 2), chá 10/11
+  l.setQtd('2026-10', arroz.id, 2);
+  l.setPreco('2026-10', arroz.id, at.id, 20); l.setPreco('2026-10', arroz.id, as.id, 22); l.setPreco('2026-10', arroz.id, sam.id, 24);
+  l.setQtd('2026-10', cafe.id, 1);
+  l.setPreco('2026-10', cafe.id, at.id, 10); l.setPreco('2026-10', cafe.id, as.id, 11);
+  assert.equal(l.economia('2026-10'), 2 * 3 + 1, 'arroz: média dos outros 23 − 20 = 3 × 2; chá: 11 − 10');
+  // novembro: arroz caiu para 19, chá subiu para 12
+  l.setQtd('2026-11', arroz.id, 2); l.setQtd('2026-11', cafe.id, 1);
+  l.setPreco('2026-11', arroz.id, at.id, 19); l.setPreco('2026-11', cafe.id, at.id, 12); l.setPreco('2026-11', cafe.id, as.id, 13);
+  const v = l.variacoes('2026-10', '2026-11');
+  assert.deepEqual(v.map((x) => [x.p.nome, x.pct]), [['Chá', 20], ['Arroz', -5]]);
+  assert.deepEqual(l.inflacao('2026-10', '2026-11'), { pct: Math.round(((19 * 2 + 12) / (20 * 2 + 10) - 1) * 1000) / 10, n: 2 });
+  assert.equal(l.economiaMes('2026-11'), 1, 'só o chá tem outro mercado com preço');
+  const a = l.alertas('2026-11');
+  assert.deepEqual(a.subiu.map((x) => x.p.nome), ['Chá']);
+  assert.equal(a.semPreco, 0);
+  l.setQtd('2026-11', p('Sal', '2026-11').id, 1);
+  assert.equal(l.alertas('2026-11').semPreco, 1);
+  assert.equal(l.inflacao('2026-10', '2026-08'), null);
+});

@@ -1,7 +1,7 @@
 // Tela principal: a lista do mês, com preços por mercado e a comparação.
 
 import { app } from './ctx.js';
-import { h, fmtRS, fmtN, fmtQ, lerExpr, folha, perguntar, toast, vibrar, campoMoeda } from './ui.js';
+import { h, fmtRS, fmtN, fmtQ, lerExpr, folha, perguntar, toast, vibrar, campoMoeda, icone, precoEtq } from './ui.js';
 import { norm, lerNumero, nomeMes, porUnidade, variacaoPreco, mesDe, nomeDaMarca } from './modelo.js';
 import { marcasComuns } from './marcas.js';
 import { montarGrade, pintarLinha, telaLarga } from './grade.js';
@@ -25,12 +25,12 @@ export function telaPrecos(topo, tela) {
     type: 'search', placeholder: 'Buscar produto…', value: filtros.busca, enterkeyhint: 'search', 'aria-label': 'Buscar produto',
     oninput: (e) => { filtros.busca = e.target.value; limpar.hidden = !filtros.busca; clearTimeout(busca._t); busca._t = setTimeout(pintarLista, 120); },
   });
-  const limpar = h('button', { 'aria-label': 'Limpar busca', hidden: !filtros.busca, onclick: () => { busca.value = ''; filtros.busca = ''; limpar.hidden = true; pintarLista(); busca.focus(); } }, '✕');
+  const limpar = h('button', { 'aria-label': 'Limpar busca', hidden: !filtros.busca, onclick: () => { busca.value = ''; filtros.busca = ''; limpar.hidden = true; pintarLista(); busca.focus(); } }, icone('x'));
   elFiltros = h('div', { class: 'filtros' });
   elProg = h('div', { class: 'progresso' });
   topo.append(
     h('div', { class: 'linha-topo' }, botaoMes(), h('div', { class: 'espaco' }), app.seloSinc()),
-    h('div', { class: 'busca' }, h('span', { class: 'lupa' }, '🔎'), busca, limpar),
+    h('div', { class: 'busca' }, h('span', { class: 'lupa' }, icone('search')), busca, limpar),
     elFiltros, elProg,
   );
   elLista = h('div', { id: 'lista' });
@@ -41,20 +41,20 @@ export function telaPrecos(topo, tela) {
 
 export function botaoMes() {
   return h('button', { class: 'btn-mes', onclick: () => app.abrirMeses(), 'aria-label': 'Escolher lista' },
-    app.loja.nomeLista(app.mes), h('span', { class: 'seta' }, '▼'));
+    app.loja.nomeLista(app.mes), h('span', { class: 'seta' }, icone('chevD')));
 }
 
 function pintarFiltros() {
   const { loja } = app;
   const cat = loja.categorias().find((c) => c.id === filtros.cat);
   const merc = loja.mercados().find((m) => m.id === filtros.merc);
-  const chip = (rotulo, ativo, fn) => h('button', { class: 'chip', 'aria-pressed': String(!!ativo), onclick: fn }, rotulo);
+  const chip = (ic, rotulo, ativo, fn) => h('button', { class: 'chip', 'aria-pressed': String(!!ativo), onclick: fn }, icone(ic), rotulo);
   elFiltros.replaceChildren(
-    chip(merc ? `🏪 ${merc.nome} ✕` : '🏪 Mercado', merc, () => (merc ? (filtros.merc = null, atualizar()) : escolherMercado())),
-    chip('⏳ Falta pesquisar', filtros.falta, () => { filtros.falta = !filtros.falta; atualizar(); }),
-    chip(cat ? `🗂️ ${cat.nome} ✕` : '🗂️ Categoria', cat, () => (cat ? (filtros.cat = null, atualizar()) : escolherCategoria())),
-    chip('🛒 Vou comprar', filtros.comprar, () => { filtros.comprar = !filtros.comprar; atualizar(); }),
-    telaLarga() ? chip(vistaGrade() ? '🧮 Planilha' : '🧮 Ver como planilha', vistaGrade(), () => { app.prefs.vista = vistaGrade() ? 'cartoes' : 'grade'; app.salvarPrefs(); app.render(); }) : null,
+    chip('store', merc ? h('span', { class: 'chip-tx' }, merc.nome, icone('x')) : 'Mercado', merc, () => (merc ? (filtros.merc = null, atualizar()) : escolherMercado())),
+    chip('search', 'Falta pesquisar', filtros.falta, () => { filtros.falta = !filtros.falta; atualizar(); }),
+    chip('folder', cat ? h('span', { class: 'chip-tx' }, cat.nome, icone('x')) : 'Categoria', cat, () => (cat ? (filtros.cat = null, atualizar()) : escolherCategoria())),
+    chip('cart', 'Vou comprar', filtros.comprar, () => { filtros.comprar = !filtros.comprar; atualizar(); }),
+    telaLarga() ? chip('sheet', vistaGrade() ? 'Planilha' : 'Ver como planilha', vistaGrade(), () => { app.prefs.vista = vistaGrade() ? 'cartoes' : 'grade'; app.salvarPrefs(); app.render(); }) : null,
   );
   function atualizar() { pintarFiltros(); pintarLista(); scrollTo(0, 0); }
   function escolherCategoria() {
@@ -66,7 +66,7 @@ function pintarFiltros() {
     const f = folha([h('h2', null, 'Pesquisar em um mercado'),
       h('p', { class: 'sub' }, 'Cada produto mostra direto os campos desse mercado — ideal para anotar os preços andando pelo corredor.'),
       h('div', { class: 'opcoes' }, loja.mercados().map((m) => h('button', { class: 'opcao', onclick: () => { filtros.merc = m.id; f.fechar(); atualizar(); } },
-        h('span', { class: 'ic' }, '🏪'), h('span', { class: 'tx' }, m.nome))))]);
+        h('span', { class: 'ic' }, icone('store')), h('span', { class: 'tx' }, m.nome))))]);
   }
 }
 
@@ -117,7 +117,7 @@ export function pintarLista() {
         app.prefs.recolhidas = [...s]; app.salvarPrefs();
         if (!r && !sec.querySelector('.card')) itens.append(...visiveis.map(montarCard));
       },
-    }, h('span', { class: 'tri' }, '▼'), h('span', { class: 'nome' }, c.nome), info);
+    }, icone('chevD', 'tri'), h('span', { class: 'nome trilho' }, c.nome), info);
     const itens = h('div', { class: 'itens' });
     if (!recolhida) itens.append(...visiveis.map(montarCard));
     sec._info = info; sec._lista = lista.map((p) => p.id);
@@ -129,14 +129,42 @@ export function pintarLista() {
   if (!mostrados) {
     const termo = filtros.busca.trim();
     frag.push(h('div', { class: 'vazio-lista' },
-      h('div', { class: 'grande' }, todos.length ? '🔍' : '🧺'),
-      h('p', null, todos.length ? (termo ? `Nenhum produto com “${termo}”.` : 'Nada por aqui com esses filtros. 🎉') : 'Este mês ainda não tem produtos.'),
-      termo ? h('button', { class: 'btn prim', onclick: () => novoProduto({ nome: termo }) }, `＋ Incluir “${termo}”`) :
-        !todos.length ? h('button', { class: 'btn prim', onclick: () => novoProduto() }, '＋ Incluir produto') : null));
+      h('div', { class: 'grande' }, icone(todos.length ? 'search' : 'cart')),
+      h('p', null, todos.length ? (termo ? `Nenhum produto com “${termo}”.` : 'Nada por aqui com esses filtros.') : 'Este mês ainda não tem produtos.'),
+      termo ? h('button', { class: 'btn prim', onclick: () => novoProduto({ nome: termo }) }, icone('plus'), `Incluir “${termo}”`) :
+        !todos.length ? h('button', { class: 'btn prim', onclick: () => novoProduto() }, icone('plus'), 'Incluir produto') : null));
   }
   const banner = bannerRepetir(todos);
-  elLista.replaceChildren(...(banner ? [banner] : []), ...frag);
+  const etq = !grade && !filtrando ? etiquetaDoMes() : null;
+  elLista.replaceChildren(...(etq ? [etq] : []), ...(banner ? [banner] : []), ...frag);
   pintarProgresso();
+}
+
+// Resumo do mês no topo: a etiqueta grande com o total da rota, o valor do mês, a sobra, a economia e os avisos
+function etiquetaDoMes() {
+  const { loja, mes } = app;
+  const o = loja.orcamento(mes);
+  if (!o.itens) return null;
+  const a = loja.alertas(mes);
+  const eco = loja.economia(mes);
+  const pct = o.valor ? Math.min(100, (o.planejado / o.valor) * 100) : 0;
+  const tags = [];
+  if (a.subiu.length) tags.push(h('button', { class: 'tagp amb', onclick: () => { rolarParaProduto(a.subiu[0].p.id); } },
+    `${a.subiu[0].p.nome} subiu ${Math.round(a.subiu[0].pct)}%${a.subiu.length > 1 ? ` (+${a.subiu.length - 1})` : ''}`));
+  if (a.semPreco) tags.push(h('button', { class: 'tagp', onclick: () => { filtros.falta = true; filtros.comprar = true; pintarFiltros(); pintarLista(); scrollTo(0, 0); } },
+    `${a.semPreco} ${a.semPreco === 1 ? 'item sem preço' : 'itens sem preço'}`));
+  if (a.rota) tags.push(h('button', { class: 'tagp', onclick: () => app.irAba('compra') },
+    `${a.rota.ids.length} ${a.rota.ids.length === 1 ? 'mercado basta' : 'mercados bastam'}${a.rota.extra > 0.005 ? ` (+${fmtRS(a.rota.extra)})` : ''}`));
+  return h('section', { class: `etq-mes ${o.estado}`, 'aria-label': 'Resumo do mês' },
+    h('div', { class: 'etq-mes-val' },
+      h('button', { class: 'etq-mes-valor', onclick: () => app.abrirTotais?.(), 'aria-label': 'Ver os totais' }, precoEtq(o.planejado)),
+      h('span', { class: 'de-valor num' }, o.valor ? `de ${fmtRS(o.valor)}` : 'na sua rota')),
+    o.valor ? h('div', { class: `orc-barra ${o.estado}` }, h('i', { style: { width: `${pct}%` } })) : null,
+    h('div', { class: 'etq-mes-linha' },
+      o.valor ? h('span', null, o.estado === 'passou' ? 'Passou ' : 'Sobram ', h('b', { class: 'num' }, fmtRS(Math.abs(o.sobra))), o.tipo === 'lista' ? ' do limite' : ' do valor do mês')
+        : h('button', { class: 'etq-link', onclick: () => app.abrirValor() }, `${o.itens} itens · definir valor do mês`),
+      eco > 0.004 ? h('span', null, 'Economia ', h('b', { class: 'num verde' }, fmtRS(eco))) : null),
+    tags.length ? h('div', { class: 'tags' }, tags) : null);
 }
 
 // Mês sem nenhuma quantidade e mês anterior com quantidades: oferece repetir com um toque
@@ -148,7 +176,7 @@ function bannerRepetir(todos) {
   const n = todos.filter((p) => loja.produto(mesAnterior, p.id)?.qtd).length;
   if (!n) return null;
   return h('div', { class: 'banner-repetir' },
-    h('div', null, h('b', null, `🔁 Repetir as quantidades de ${nomeMes(mesAnterior)}?`),
+    h('div', null, h('b', null, `Repetir as quantidades de ${nomeMes(mesAnterior)}?`),
       h('small', null, `${n} ${n === 1 ? 'item tinha' : 'itens tinham'} quantidade lá. Depois é só ajustar.`)),
     h('div', { class: 'grade2' },
       h('button', { class: 'btn prim', onclick: () => repetirQuantidades() }, 'Repetir'),
@@ -173,7 +201,7 @@ function pintarBanda(sec) {
     n++;
     if (p.qtd) { comprar++; total += loja.calcProduto(mes, pid).totalMenor || 0; }
   }
-  sec._info.replaceChildren(...[`${n} ${n === 1 ? 'item' : 'itens'}`, comprar ? h('br') : null, comprar ? `${comprar} p/ comprar · ${fmtRS(total)}` : null].filter(Boolean));
+  sec._info.replaceChildren(...(comprar ? [`${comprar} de ${n} p/ comprar`, h('br'), h('b', { class: 'num' }, fmtRS(total))] : [`${n} ${n === 1 ? 'item' : 'itens'}`]));
 }
 
 function pintarProgresso() {
@@ -224,16 +252,22 @@ function construir(card) {
   };
   const sub = h('small');
   card._sub = sub; card._qtd = qtdInp;
+  card._unid = h('small', { class: 'unid num' });
+  // etiqueta: nome, marca e preço por kg à esquerda; o menor preço grande à direita
+  card._lado = h('button', { class: 'etq-lado', 'aria-label': `Preços de ${p.nome}`, onclick: () => alternar(card) });
   const topo = h('div', { class: 'card-topo' },
-    h('button', { class: 'card-nome', 'aria-expanded': String(aberto), onclick: () => alternar(card) }, h('b', null, p.nome), sub),
-    h('div', { class: `qtd${p.qtd ? '' : ' vazia'}` },
-      h('button', { 'aria-label': 'Diminuir', onclick: passo(-1) }, '−'), qtdInp, h('button', { 'aria-label': 'Aumentar', onclick: passo(1) }, '+')));
+    h('button', { class: 'card-nome', 'aria-expanded': String(aberto), onclick: () => alternar(card) }, h('b', null, p.nome), sub, card._unid),
+    card._lado);
   card._chips = h('div', { class: 'chips-precos', onclick: () => alternar(card) });
+  card._tot = h('span', { class: 'tot num' });
   card._resumo = h('div', { class: 'resumo', onclick: () => alternar(card) });
-  const filhos = [topo];
+  const base = h('div', { class: 'etq-base' },
+    h('div', { class: `qtd${p.qtd ? '' : ' vazia'}` },
+      h('button', { 'aria-label': 'Diminuir', onclick: passo(-1) }, '−'), qtdInp, h('button', { 'aria-label': 'Aumentar', onclick: passo(1) }, '+')),
+    aberto ? h('div', { class: 'espaco' }) : card._chips, card._tot);
+  const filhos = [topo, base];
   const mercs = loja.mercados();
   const linhasMerc = aberto ? mercs : filtros.merc ? mercs.filter((m) => m.id === filtros.merc) : [];
-  if (!aberto) filhos.push(card._chips);
   if (linhasMerc.length) {
     const dl = h('datalist', { id: `marcas-${pid}` }, sugestoesMarca(pid, p.nome).map((m) => h('option', { value: m })));
     filhos.push(dl, h('div', { class: 'painel' }, linhasMerc.map((m) => linhaMercado(card, m, dl.id))));
@@ -241,10 +275,10 @@ function construir(card) {
   filhos.push(card._resumo);
   if (aberto) {
     filhos.push(h('div', { class: 'acoes-card' },
-      h('button', { class: 'btn pequeno', onclick: () => editarProduto(pid) }, '✎ Editar'),
-      h('button', { class: 'btn pequeno', onclick: () => abrirMarcas(pid) }, '🏷️ Marcas'),
-      h('button', { class: 'btn pequeno', onclick: () => app.irAba('historico', { pid }) }, '📈 Histórico'),
-      h('button', { class: 'btn pequeno fantasma', onclick: () => alternar(card) }, '▲ Fechar')));
+      h('button', { class: 'btn pequeno', onclick: () => editarProduto(pid) }, icone('pencil'), 'Editar'),
+      h('button', { class: 'btn pequeno', onclick: () => abrirMarcas(pid) }, icone('tag'), 'Marcas'),
+      h('button', { class: 'btn pequeno', onclick: () => app.irAba('historico', { pid }) }, icone('chart'), 'Histórico'),
+      h('button', { class: 'btn pequeno fantasma', onclick: () => alternar(card) }, 'Fechar')));
   }
   card.replaceChildren(...filhos);
   pintar(card);
@@ -303,10 +337,10 @@ function linhaMercado(card, m, listaMarcas) {
     if (v === null) return;
     loja.setObs(mes, pid, m.id, v);
     construir(card);
-  } }, '💬');
+  } }, icone('nota'));
   const linha = h('div', { class: 'lm', dataset: { mid: m.id } },
     h('div', { class: 'mn' }, m.nome, tot, info), preco, marca, btnObs,
-    r.obs ? h('div', { class: 'obs-linha' }, `💬 ${r.obs}`) : null);
+    r.obs ? h('div', { class: 'obs-linha' }, icone('nota'), r.obs) : null);
   linha._tot = tot; linha._preco = preco; linha._marca = marca; linha._info = info; linha._antR = mesAnterior ? loja.preco(mesAnterior, pid, m.id) : null;
   return linha;
 }
@@ -349,24 +383,32 @@ function pintar(card) {
   const aceitas = loja.marcasAceitas(pid);
   card._sub.textContent = [marcaPrinc, aceitas.length ? `só ${aceitas.join(', ')}` : '', p.obs].filter(Boolean).join(' · ');
   card._sub.hidden = !card._sub.textContent;
-  card._chips.hidden = c.pesquisados === 0;
-  card._chips.replaceChildren(...c.linhas.map((l) => h('span', { class: `cp${c.baratos.has(l.mid) ? ' menor' : ''}${l.preco === null ? ' vazio' : ''}${l.aceita ? '' : ' fora'}` },
-    curto(l.nome), h('b', { class: 'num' }, l.preco === null ? '—' : fmtN(l.preco)))));
+  const lMenor = c.linhas.find((l) => l.mid === c.mercMenor);
+  card._unid.textContent = lMenor?.porUnid != null ? `${fmtRS(lMenor.porUnid)}/${lMenor.tam.base}` : '';
+  card._unid.hidden = !card._unid.textContent;
+  const comparado = c.menor !== null && c.pesquisados >= 2;
+  card.classList.toggle('menor-fita', comparado);
+  card._lado.className = `etq-lado${comparado ? ' menor' : ''}${c.menor === null ? ' sem' : ''}`;
+  card._lado.replaceChildren(precoEtq(c.menor),
+    h('small', null, c.menor === null ? 'toque para pesquisar' : `no ${c.nomeMercMenor}${c.baratos.size > 1 ? ` +${c.baratos.size - 1}` : ''}`));
+  // os outros mercados, pequenos, na base da etiqueta
+  const outros = c.linhas.filter((l) => l.preco !== null && l.mid !== c.mercMenor);
+  card._chips.hidden = !outros.length;
+  card._chips.replaceChildren(...outros.map((l) => h('span', { class: `cp${c.baratos.has(l.mid) ? ' menor' : ''}${l.aceita ? '' : ' fora'}` },
+    curto(l.nome), h('b', { class: 'num' }, fmtN(l.preco)))));
+  card._tot.replaceChildren(...(c.totalMenor !== null ? ['= ', h('b', null, fmtRS(c.totalMenor))] : []));
+  card._resumo.replaceChildren();
   if (c.menor !== null) {
     card._resumo.className = 'resumo';
-    card._resumo.replaceChildren(...[
-      h('span', null, '✓ ', h('b', { class: 'num' }, fmtRS(c.menor)), ' no ', h('b', null, c.nomeMercMenor), c.baratos.size > 1 ? ` (+${c.baratos.size - 1})` : ''),
-      c.marcaMenor ? h('span', null, c.marcaMenor) : null,
-      h('span', { class: 'tot num' }, c.totalMenor !== null ? `Total ${fmtRS(c.totalMenor)}` : 'sem qtd.')].filter(Boolean));
     const pu = porUnidade(c);
     if (pu?.difere) {
       card._resumo.append(h('span', { class: 'dica-unid' },
-        `💡 Por ${pu.base === 'un' ? 'unidade' : pu.base}, o ${pu.melhor.nome} sai mais em conta: ${fmtRS(pu.melhor.porUnid)}/${pu.base} (${pu.melhor.marca})`));
+        `Por ${pu.base === 'un' ? 'unidade' : pu.base}, o ${pu.melhor.nome} sai mais em conta: ${fmtRS(pu.melhor.porUnid)}/${pu.base} (${pu.melhor.marca})`));
     }
   } else {
     card._resumo.className = 'resumo nada';
-    card._resumo.replaceChildren(h('span', null, c.pesquisados ? 'Nenhum preço das marcas que vocês compram (🏷️ Marcas)' :
-      filtros.merc || abertos.has(pid) ? 'Digite o preço para comparar' : 'Sem preço ainda — toque para pesquisar'));
+    // fechado e sem preço nenhum: a etiqueta já diz "sem preço"; a frase só aparece quando ajuda
+    if (c.pesquisados || filtros.merc || abertos.has(pid)) card._resumo.replaceChildren(h('span', null, c.pesquisados ? 'Nenhum preço das marcas que vocês compram (Marcas)' : 'Digite o preço para comparar'));
   }
   for (const linha of card.querySelectorAll('.lm')) {
     const l = c.linhas.find((x) => x.mid === linha.dataset.mid);
@@ -381,7 +423,7 @@ function pintar(card) {
     const pct = variacaoPreco(l, linha._antR);
     if (pct !== null && Math.abs(pct) >= 3) {
       partes.push(h('span', { class: pct > 0 ? 'var-sobe' : 'var-desce', title: `mês anterior: ${fmtRS(linha._antR.preco)} (${linha._antR.marca || 'sem marca'})` },
-        `${pct > 0 ? '▲' : '▼'}${Math.round(Math.abs(pct))}%`));
+        icone(pct > 0 ? 'up' : 'down'), `${Math.round(Math.abs(pct))}%`));
     }
     linha._info.replaceChildren(...partes.flatMap((x, i) => (i ? [' ', x] : [x])));
     if (ativo !== linha._preco && lerExpr(linha._preco.value) !== l.preco) linha._preco.value = fmtN(l.preco);
